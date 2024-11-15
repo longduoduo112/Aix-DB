@@ -20,7 +20,7 @@
 - **应用架构**：作为一个轻量级全链路一站式大模型应用开发框架方便扩展落地
 - **灵活部署**：支持大模型应用开发各依赖组件docker-compose一键拉起快速部署零配置
 
-# 运行效果
+## 运行效果
 ![image](./images/chat-02.png***REMOVED***
 ![image](./images/chat-03.png***REMOVED***
 
@@ -37,7 +37,7 @@
 - 模型: Qwen2.5
 
 
-# 🚀 **快速开始**
+## 🚀 **快速开始**
 
 1. **启动服务**
    ```bash
@@ -59,7 +59,7 @@
    python3 common/initialize_mysql.py
 
 
-# 🛠️ **本地开发**
+## 🛠️ **本地开发**
 - 🔧**需要安装项目所有前置依赖**
 1. **后端依赖安装**  
    - poetry安装 [参考poetry官方文档](https://python-poetry.org/docs/***REMOVED***
@@ -69,6 +69,7 @@
 
 2. **前端依赖安装**  
 - 前端基于chatgpt-vue3-light-mvp开源项目[参考chatgpt-vue3-light-mvp部署](https://github.com/pdsuwwz/chatgpt-vue3-light-mvp***REMOVED***
+
 
 ## 🌹 支持
 
