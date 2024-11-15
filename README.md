@@ -60,7 +60,7 @@
 
 
 # 🛠️ **本地开发**
-- **需要安装项目所有前置依赖**
+- 🔧**需要安装项目所有前置依赖**
 1. **后端依赖安装**  
    - poetry安装 [参考poetry官方文档](https://python-poetry.org/docs/***REMOVED***
    ```bash
