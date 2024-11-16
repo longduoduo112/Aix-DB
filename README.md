@@ -80,4 +80,4 @@
 
 ## License
 
-[MIT](./LICENSE***REMOVED*** License | Copyright © 2020-PRESENT [AiAdventurer](https://github.com/apconw***REMOVED***
+[MIT](./LICENSE***REMOVED*** License | Copyright © 2024-PRESENT [AiAdventurer](https://github.com/apconw***REMOVED***
