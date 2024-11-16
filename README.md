@@ -24,8 +24,11 @@
 ![image](./images/chat-02.png***REMOVED***
 ![image](./images/chat-03.png***REMOVED***
 
-https://github.com/user-attachments/assets/42e8254f-d1bc-42e0-88dd-90279d040ae0
-https://github.com/apconw/sanic-web/blob/master/images/vedio.mp4
+```HTML
+<video width="320" height="240" controls>
+    <source src="./images/vedio.mp4" type="video/mp4">
+</video>
+```
 
 # 🔧 **前置条件**
 * Python 3.8+
