@@ -57,7 +57,11 @@
    - 如果需要安装最新版Dify的同学,可以参考官方文档[Dify官方文档](https://docs.dify.ai/zh-hans***REMOVED***。
    - 具体步骤如下：
 
-1. **启动服务**
+1. **克隆仓库**
+   ```bash
+   git clone https://github.com/apconw/sanic-web.git
+
+2. **启动服务**
    - Dify访问地址：http://localhost 账号:admin 密码:admin123 
    ```bash
    # 拉起dify服务
@@ -68,7 +72,7 @@
    cd docker
    docker compose up -d
 
-2. **数据初始化**
+3. **数据初始化**
    ```bash
    cd docker
    ./init.sh
@@ -77,7 +81,7 @@
    
    python3 common/initialize_mysql.py
    
-3. **访问服务**
+4. **访问服务**
  - 前端服务：http://localhost:8081
 
 
