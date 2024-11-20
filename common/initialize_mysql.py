@@ -11,7 +11,7 @@ Mysql 初始化脚本工具类
 MYSQL_ROOT_PASSWORD = "1"  # MySQL root 用户的密码
 SQL_FILE = "../docker/init_sql.sql"  # SQL 文件路径
 HOST = "localhost"  # MySQL 服务器地址
-PORT = 3306  # MySQL 服务器端口
+PORT = 13006  # MySQL 服务器端口
 
 
 def check_sql_file(file_path***REMOVED***:
