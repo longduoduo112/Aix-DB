@@ -85,7 +85,7 @@ class DiFyRequest:
                 ***REMOVED*** as response:
                     logging.info(f"dify response status: {response.status***REMOVED***"***REMOVED***
                     if response.status == 200:
-                        await self.res_begin(res, chat_id***REMOVED***
+                        # await self.res_begin(res, chat_id***REMOVED***
                         data_type = ""
                         bus_data = ""
                         while True:
@@ -171,7 +171,18 @@ class DiFyRequest:
                                 elif DiFyCodeEnum.MESSAGE_ERROR.value[0] == event_name:
                                     # 输出异常情况日志
                                     error_msg = data_json.get("message"***REMOVED***
-                                    logging.error(f"Error during get_answer: {error_msg***REMOVED***"***REMOVED***
+                                    logging.error(f"Error 调用dify失败错误信息: {data_json***REMOVED***"***REMOVED***
+                                    await res.write(
+                                        "data:"
+                                        + json.dumps(
+                                          ***REMOVED***
+                                                "data": {"messageType": "error", "content": "调用失败请查看dify日志,错误信息: " + error_msg***REMOVED***,
+                                                "dataType": DataTypeEnum.ANSWER.value[0],
+                                            ***REMOVED***,
+                                            ensure_ascii=False,
+                                        ***REMOVED***
+                                        + "\n\n"
+                                    ***REMOVED***
 
         except Exception as e:
             logging.error(f"Error during get_answer: {e***REMOVED***"***REMOVED***
