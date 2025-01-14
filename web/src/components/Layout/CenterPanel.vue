@@ -5,8 +5,8 @@ const isCollapsed = ref(false***REMOVED***
 
 ***REMOVED***
     <LayoutSlotCenterPanel v-bind="$attrs">
-        <template v-if="$slots.sidebar" #left>
-            <div
+        <template #left>
+            <!-- <div
                 min-h-0
                 flex="1 ~ col"
                 :class="[
@@ -15,8 +15,8 @@ const isCollapsed = ref(false***REMOVED***
                     'bg-bgcolor'
             ***REMOVED***"
                 style="background-color: #ffffff"
-  ***REMOVED***
-      ***REMOVED***v-if="$slots['sidebar-header']" py="2px">
+  ***REMOVED*** -->
+            <!-- <div v-if="$slots['sidebar-header']" py="2px">
                     <slot name="sidebar-header"></slot>
     ***REMOVED***
                 <div
@@ -29,8 +29,8 @@ const isCollapsed = ref(false***REMOVED***
     ***REMOVED***
       ***REMOVED***py="14px" px="20px">
                     <slot name="sidebar-action"></slot>
-    ***REMOVED***
-***REMOVED***
+    ***REMOVED*** -->
+            <!-- </div> -->
         ***REMOVED***
         <div h-full bg="#fefbff">
             <slot name="default"></slot>

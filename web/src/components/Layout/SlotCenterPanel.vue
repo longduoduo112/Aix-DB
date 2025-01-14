@@ -14,6 +14,9 @@ const logout = (***REMOVED*** => {
         router.push('/login'***REMOVED***
     ***REMOVED***, 500***REMOVED***
 ***REMOVED***
+const handleClickEfficiency = (***REMOVED*** => {
+    router.push('/testAssitant'***REMOVED***
+***REMOVED***
 ***REMOVED***
 
 ***REMOVED***
@@ -40,8 +43,8 @@ const logout = (***REMOVED*** => {
                         style="
                             background: linear-gradient(
                                 to bottom,
-                                #5e58e7,
-                                white
+                                #8874f1,
+                                #588af9
                             ***REMOVED***;
                             position: relative;
                         "
@@ -135,6 +138,7 @@ const logout = (***REMOVED*** => {
                             <div
                                 class="icon-button"
                                 style="margin-bottom: 10px"
+                                @click="handleClickEfficiency"
                   ***REMOVED***
                                 <n-icon size="25" class="icon">
                                     <svg
@@ -350,6 +354,7 @@ const logout = (***REMOVED*** => {
                         </n-tooltip>
                     </section>
                     <!-- <n-divider vertical style="height: 100%" /> -->
+                    <!-- 
                     <section
                         v-if="$slots.left"
                         flex="~ col"
@@ -358,7 +363,7 @@ const logout = (***REMOVED*** => {
                         overflow-hidden
           ***REMOVED***
                         <slot name="left"></slot>
-                    </section>
+                    </section> -->
                     <section flex="1" h-full overflow-hidden>
                         <slot name="default"></slot>
                     </section>

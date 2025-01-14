@@ -1,5 +1,4 @@
 import childRoutes from '@/router/child-routes'
-import Login from '../views/Login.vue'
 
 const routes: Array<RouteRecordRaw> = [
   ***REMOVED***
@@ -19,7 +18,13 @@ const routes: Array<RouteRecordRaw> = [
   ***REMOVED***
         path: '/login',
         name: 'Login',
-        component: Login
+        component: (***REMOVED*** => import('@/views/Login.vue'***REMOVED***
+    ***REMOVED***,
+  ***REMOVED***
+        path: '/testAssitant',
+        name: 'TestAssitant',
+        component: (***REMOVED*** => import('@/views/TestAssistant.vue'***REMOVED***,
+        meta: { requiresAuth: true ***REMOVED*** // 标记需要认证
     ***REMOVED***
 ]
 
