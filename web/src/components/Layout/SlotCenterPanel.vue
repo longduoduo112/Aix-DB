@@ -14,13 +14,22 @@ const logout = (***REMOVED*** => {
         router.push('/login'***REMOVED***
     ***REMOVED***, 500***REMOVED***
 ***REMOVED***
-const handleClickEfficiency = (***REMOVED*** => {
+const handleClickEfficiency = (index***REMOVED*** => {
     router.push('/testAssitant'***REMOVED***
 ***REMOVED***
 
-const handleClickChat = (***REMOVED*** => {
+const handleClickChat = (index***REMOVED*** => {
     router.push('/chat'***REMOVED***
 ***REMOVED***
+
+// 使用ref定义响应式的selectedIndex
+const selectedIndex = ref(0***REMOVED***
+onMounted((***REMOVED*** => {
+    // 初始化selectedIndex为0
+    router.currentRoute.value.path === '/testAssitant'
+        ? (selectedIndex.value = 2***REMOVED***
+        : (selectedIndex.value = 1***REMOVED***
+***REMOVED******REMOVED***
 ***REMOVED***
 
 ***REMOVED***
@@ -102,9 +111,10 @@ const handleClickChat = (***REMOVED*** => {
 
                   ***REMOVED***
                             <div
-                                class="icon-button selected"
+                                class="icon-button"
+                                :class="{ selected: selectedIndex === 1 ***REMOVED***"
                                 style="margin-bottom: 10px"
-                                @click="handleClickChat"
+                                @click="handleClickChat(1***REMOVED***"
                   ***REMOVED***
                                 <n-icon size="20" class="icon">
                                     <svg
@@ -142,8 +152,9 @@ const handleClickChat = (***REMOVED*** => {
               ***REMOVED***class="efficiency-container">
                             <div
                                 class="icon-button"
+                                :class="{ selected: selectedIndex === 2 ***REMOVED***"
                                 style="margin-bottom: 10px"
-                                @click="handleClickEfficiency"
+                                @click="handleClickEfficiency(2***REMOVED***"
                   ***REMOVED***
                                 <n-icon size="25" class="icon">
                                     <svg
