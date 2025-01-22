@@ -649,7 +649,6 @@ const hideScrollbar = (***REMOVED*** => {
                 class="w-[260px]"
                 style="
                     height: 98%;
-                    margin: 10px 0px;
                     border-top-left-radius: 20px;
                     border-bottom-left-radius: 20px;
                     background-color: #ffffff;
@@ -786,13 +785,12 @@ const hideScrollbar = (***REMOVED*** => {
                 style="
                     background: linear-gradient(to bottom, #8874f1, #588af9***REMOVED***;
                   ***REMOVED***
+                    height: 98%;
                   ***REMOVED***
+                    margin-right: 5px;
                 "
   ***REMOVED***
-                <div
-                    flex="~ justify-between items-center"
-                    style="margin-top: 8px; margin-right: 5px"
-      ***REMOVED***
+      ***REMOVED***flex="~ justify-between items-center">
                     <NavigationNavBar />
     ***REMOVED***
 
@@ -1098,7 +1096,6 @@ const hideScrollbar = (***REMOVED*** => {
                         align-items: center;
                         background-color: #f6f7fb;
                         margin-right: 5px;
-                        margin-bottom: 8px;
                         border-bottom-right-radius: 10px;
                         flex-shrink: 0;
                     "
