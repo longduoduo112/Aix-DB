@@ -21,7 +21,9 @@ def parse_env_example(file_path***REMOVED***:
                 key = match.group(1***REMOVED***.strip(***REMOVED***
                 value = match.group(2***REMOVED***.strip(***REMOVED***
                 # Remove possible quotes around the value
-                if (value.startswith('"'***REMOVED*** and value.endswith('"'***REMOVED******REMOVED*** or (value.startswith("'"***REMOVED*** and value.endswith("'"***REMOVED******REMOVED***:
+                if (value.startswith('"'***REMOVED*** and value.endswith('"'***REMOVED******REMOVED*** or (
+                    value.startswith("'"***REMOVED*** and value.endswith("'"***REMOVED***
+                ***REMOVED***:
                     value = value[1:-1]
                 env_vars[key] = value
             else:

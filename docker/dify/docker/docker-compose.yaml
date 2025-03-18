@@ -27,12 +27,14 @@ x-shared-env: &shared-api-worker-env
   MIGRATION_ENABLED: ${MIGRATION_ENABLED:-true***REMOVED***
   FILES_ACCESS_TIMEOUT: ${FILES_ACCESS_TIMEOUT:-300***REMOVED***
   ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60***REMOVED***
+  REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30***REMOVED***
   APP_MAX_ACTIVE_REQUESTS: ${APP_MAX_ACTIVE_REQUESTS:-0***REMOVED***
   APP_MAX_EXECUTION_TIME: ${APP_MAX_EXECUTION_TIME:-1200***REMOVED***
   DIFY_BIND_ADDRESS: ${DIFY_BIND_ADDRESS:-0.0.0.0***REMOVED***
   DIFY_PORT: ${DIFY_PORT:-5001***REMOVED***
-  SERVER_WORKER_AMOUNT: ${SERVER_WORKER_AMOUNT:-***REMOVED***
-  SERVER_WORKER_CLASS: ${SERVER_WORKER_CLASS:-***REMOVED***
+  SERVER_WORKER_AMOUNT: ${SERVER_WORKER_AMOUNT:-1***REMOVED***
+  SERVER_WORKER_CLASS: ${SERVER_WORKER_CLASS:-gevent***REMOVED***
+  SERVER_WORKER_CONNECTIONS: ${SERVER_WORKER_CONNECTIONS:-10***REMOVED***
   CELERY_WORKER_CLASS: ${CELERY_WORKER_CLASS:-***REMOVED***
   GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-360***REMOVED***
   CELERY_WORKER_AMOUNT: ${CELERY_WORKER_AMOUNT:-***REMOVED***
@@ -103,7 +105,7 @@ x-shared-env: &shared-api-worker-env
   TENCENT_COS_SECRET_ID: ${TENCENT_COS_SECRET_ID:-your-secret-id***REMOVED***
   TENCENT_COS_REGION: ${TENCENT_COS_REGION:-your-region***REMOVED***
   TENCENT_COS_SCHEME: ${TENCENT_COS_SCHEME:-your-scheme***REMOVED***
-  OCI_ENDPOINT: ${OCI_ENDPOINT:-https://objectstorage.us-ashburn-1.oraclecloud.com***REMOVED***
+  OCI_ENDPOINT: ${OCI_ENDPOINT:-https://your-object-storage-namespace.compat.objectstorage.us-ashburn-1.oraclecloud.com***REMOVED***
   OCI_BUCKET_NAME: ${OCI_BUCKET_NAME:-your-bucket-name***REMOVED***
   OCI_ACCESS_KEY: ${OCI_ACCESS_KEY:-your-access-key***REMOVED***
   OCI_SECRET_KEY: ${OCI_SECRET_KEY:-your-secret-key***REMOVED***
@@ -132,10 +134,11 @@ x-shared-env: &shared-api-worker-env
   QDRANT_CLIENT_TIMEOUT: ${QDRANT_CLIENT_TIMEOUT:-20***REMOVED***
   QDRANT_GRPC_ENABLED: ${QDRANT_GRPC_ENABLED:-false***REMOVED***
   QDRANT_GRPC_PORT: ${QDRANT_GRPC_PORT:-6334***REMOVED***
-  MILVUS_URI: ${MILVUS_URI:-http://127.0.0.1:19530***REMOVED***
+  MILVUS_URI: ${MILVUS_URI:-http://host.docker.internal:19530***REMOVED***
   MILVUS_TOKEN: ${MILVUS_TOKEN:-***REMOVED***
-  MILVUS_USER: ${MILVUS_USER:-root***REMOVED***
-  MILVUS_PASSWORD: ${MILVUS_PASSWORD:-Milvus***REMOVED***
+  MILVUS_USER: ${MILVUS_USER:-***REMOVED***
+  MILVUS_PASSWORD: ${MILVUS_PASSWORD:-***REMOVED***
+  MILVUS_ENABLE_HYBRID_SEARCH: ${MILVUS_ENABLE_HYBRID_SEARCH:-False***REMOVED***
   MYSCALE_HOST: ${MYSCALE_HOST:-myscale***REMOVED***
   MYSCALE_PORT: ${MYSCALE_PORT:-8123***REMOVED***
   MYSCALE_USER: ${MYSCALE_USER:-default***REMOVED***
@@ -154,6 +157,8 @@ x-shared-env: &shared-api-worker-env
   PGVECTOR_DATABASE: ${PGVECTOR_DATABASE:-dify***REMOVED***
   PGVECTOR_MIN_CONNECTION: ${PGVECTOR_MIN_CONNECTION:-1***REMOVED***
   PGVECTOR_MAX_CONNECTION: ${PGVECTOR_MAX_CONNECTION:-5***REMOVED***
+  PGVECTOR_PG_BIGM: ${PGVECTOR_PG_BIGM:-false***REMOVED***
+  PGVECTOR_PG_BIGM_VERSION: ${PGVECTOR_PG_BIGM_VERSION:-1.2-20240606***REMOVED***
   PGVECTO_RS_HOST: ${PGVECTO_RS_HOST:-pgvecto-rs***REMOVED***
   PGVECTO_RS_PORT: ${PGVECTO_RS_PORT:-5432***REMOVED***
   PGVECTO_RS_USER: ${PGVECTO_RS_USER:-postgres***REMOVED***
@@ -194,11 +199,13 @@ x-shared-env: &shared-api-worker-env
   CHROMA_DATABASE: ${CHROMA_DATABASE:-default_database***REMOVED***
   CHROMA_AUTH_PROVIDER: ${CHROMA_AUTH_PROVIDER:-chromadb.auth.token_authn.TokenAuthClientProvider***REMOVED***
   CHROMA_AUTH_CREDENTIALS: ${CHROMA_AUTH_CREDENTIALS:-***REMOVED***
-  ORACLE_HOST: ${ORACLE_HOST:-oracle***REMOVED***
-  ORACLE_PORT: ${ORACLE_PORT:-1521***REMOVED***
   ORACLE_USER: ${ORACLE_USER:-dify***REMOVED***
   ORACLE_PASSWORD: ${ORACLE_PASSWORD:-dify***REMOVED***
-  ORACLE_DATABASE: ${ORACLE_DATABASE:-FREEPDB1***REMOVED***
+  ORACLE_DSN: ${ORACLE_DSN:-oracle:1521/FREEPDB1***REMOVED***
+  ORACLE_CONFIG_DIR: ${ORACLE_CONFIG_DIR:-/app/api/storage/wallet***REMOVED***
+  ORACLE_WALLET_LOCATION: ${ORACLE_WALLET_LOCATION:-/app/api/storage/wallet***REMOVED***
+  ORACLE_WALLET_PASSWORD: ${ORACLE_WALLET_PASSWORD:-dify***REMOVED***
+  ORACLE_IS_AUTONOMOUS: ${ORACLE_IS_AUTONOMOUS:-false***REMOVED***
   RELYT_HOST: ${RELYT_HOST:-db***REMOVED***
   RELYT_PORT: ${RELYT_PORT:-5432***REMOVED***
   RELYT_USER: ${RELYT_USER:-postgres***REMOVED***
@@ -245,6 +252,13 @@ x-shared-env: &shared-api-worker-env
   OCEANBASE_VECTOR_DATABASE: ${OCEANBASE_VECTOR_DATABASE:-test***REMOVED***
   OCEANBASE_CLUSTER_NAME: ${OCEANBASE_CLUSTER_NAME:-difyai***REMOVED***
   OCEANBASE_MEMORY_LIMIT: ${OCEANBASE_MEMORY_LIMIT:-6G***REMOVED***
+  OPENGAUSS_HOST: ${OPENGAUSS_HOST:-opengauss***REMOVED***
+  OPENGAUSS_PORT: ${OPENGAUSS_PORT:-6600***REMOVED***
+  OPENGAUSS_USER: ${OPENGAUSS_USER:-postgres***REMOVED***
+  OPENGAUSS_PASSWORD: ${OPENGAUSS_PASSWORD:-Dify@123***REMOVED***
+  OPENGAUSS_DATABASE: ${OPENGAUSS_DATABASE:-dify***REMOVED***
+  OPENGAUSS_MIN_CONNECTION: ${OPENGAUSS_MIN_CONNECTION:-1***REMOVED***
+  OPENGAUSS_MAX_CONNECTION: ${OPENGAUSS_MAX_CONNECTION:-5***REMOVED***
   UPSTASH_VECTOR_URL: ${UPSTASH_VECTOR_URL:-https://xxx-vector.upstash.io***REMOVED***
   UPSTASH_VECTOR_TOKEN: ${UPSTASH_VECTOR_TOKEN:-dify***REMOVED***
   UPLOAD_FILE_SIZE_LIMIT: ${UPLOAD_FILE_SIZE_LIMIT:-15***REMOVED***
@@ -303,8 +317,12 @@ x-shared-env: &shared-api-worker-env
   WORKFLOW_FILE_UPLOAD_LIMIT: ${WORKFLOW_FILE_UPLOAD_LIMIT:-10***REMOVED***
   HTTP_REQUEST_NODE_MAX_BINARY_SIZE: ${HTTP_REQUEST_NODE_MAX_BINARY_SIZE:-10485760***REMOVED***
   HTTP_REQUEST_NODE_MAX_TEXT_SIZE: ${HTTP_REQUEST_NODE_MAX_TEXT_SIZE:-1048576***REMOVED***
+  HTTP_REQUEST_NODE_SSL_VERIFY: ${HTTP_REQUEST_NODE_SSL_VERIFY:-True***REMOVED***
   SSRF_PROXY_HTTP_URL: ${SSRF_PROXY_HTTP_URL:-http://ssrf_proxy:3128***REMOVED***
   SSRF_PROXY_HTTPS_URL: ${SSRF_PROXY_HTTPS_URL:-http://ssrf_proxy:3128***REMOVED***
+  LOOP_NODE_MAX_COUNT: ${LOOP_NODE_MAX_COUNT:-100***REMOVED***
+  MAX_TOOLS_NUM: ${MAX_TOOLS_NUM:-10***REMOVED***
+  MAX_PARALLEL_LIMIT: ${MAX_PARALLEL_LIMIT:-10***REMOVED***
   TEXT_GENERATION_TIMEOUT_MS: ${TEXT_GENERATION_TIMEOUT_MS:-60000***REMOVED***
   PGUSER: ${PGUSER:-${DB_USERNAME***REMOVED******REMOVED***
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${DB_PASSWORD***REMOVED******REMOVED***
@@ -374,6 +392,10 @@ x-shared-env: &shared-api-worker-env
   SSRF_COREDUMP_DIR: ${SSRF_COREDUMP_DIR:-/var/spool/squid***REMOVED***
   SSRF_REVERSE_PROXY_PORT: ${SSRF_REVERSE_PROXY_PORT:-8194***REMOVED***
   SSRF_SANDBOX_HOST: ${SSRF_SANDBOX_HOST:-sandbox***REMOVED***
+  SSRF_DEFAULT_TIME_OUT: ${SSRF_DEFAULT_TIME_OUT:-5***REMOVED***
+  SSRF_DEFAULT_CONNECT_TIME_OUT: ${SSRF_DEFAULT_CONNECT_TIME_OUT:-5***REMOVED***
+  SSRF_DEFAULT_READ_TIME_OUT: ${SSRF_DEFAULT_READ_TIME_OUT:-5***REMOVED***
+  SSRF_DEFAULT_WRITE_TIME_OUT: ${SSRF_DEFAULT_WRITE_TIME_OUT:-5***REMOVED***
   EXPOSE_NGINX_PORT: ${EXPOSE_NGINX_PORT:-80***REMOVED***
   EXPOSE_NGINX_SSL_PORT: ${EXPOSE_NGINX_SSL_PORT:-443***REMOVED***
   POSITION_TOOL_PINS: ${POSITION_TOOL_PINS:-***REMOVED***
@@ -385,11 +407,32 @@ x-shared-env: &shared-api-worker-env
   CSP_WHITELIST: ${CSP_WHITELIST:-***REMOVED***
   CREATE_TIDB_SERVICE_JOB_ENABLED: ${CREATE_TIDB_SERVICE_JOB_ENABLED:-false***REMOVED***
   MAX_SUBMIT_COUNT: ${MAX_SUBMIT_COUNT:-100***REMOVED***
+  TOP_K_MAX_VALUE: ${TOP_K_MAX_VALUE:-10***REMOVED***
+  DB_PLUGIN_DATABASE: ${DB_PLUGIN_DATABASE:-dify_plugin***REMOVED***
+  EXPOSE_PLUGIN_DAEMON_PORT: ${EXPOSE_PLUGIN_DAEMON_PORT:-5002***REMOVED***
+  PLUGIN_DAEMON_PORT: ${PLUGIN_DAEMON_PORT:-5002***REMOVED***
+  PLUGIN_DAEMON_KEY: ${PLUGIN_DAEMON_KEY:-lYkiYYT6owG+71oLerGzA7GXCgOT++6ovaezWAjpCjf+Sjc3ZtU+qUEi***REMOVED***
+  PLUGIN_DAEMON_URL: ${PLUGIN_DAEMON_URL:-http://plugin_daemon:5002***REMOVED***
+  PLUGIN_MAX_PACKAGE_SIZE: ${PLUGIN_MAX_PACKAGE_SIZE:-52428800***REMOVED***
+  PLUGIN_PPROF_ENABLED: ${PLUGIN_PPROF_ENABLED:-false***REMOVED***
+  PLUGIN_DEBUGGING_HOST: ${PLUGIN_DEBUGGING_HOST:-0.0.0.0***REMOVED***
+  PLUGIN_DEBUGGING_PORT: ${PLUGIN_DEBUGGING_PORT:-5003***REMOVED***
+  EXPOSE_PLUGIN_DEBUGGING_HOST: ${EXPOSE_PLUGIN_DEBUGGING_HOST:-localhost***REMOVED***
+  EXPOSE_PLUGIN_DEBUGGING_PORT: ${EXPOSE_PLUGIN_DEBUGGING_PORT:-5003***REMOVED***
+  PLUGIN_DIFY_INNER_API_KEY: ${PLUGIN_DIFY_INNER_API_KEY:-QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1***REMOVED***
+  PLUGIN_DIFY_INNER_API_URL: ${PLUGIN_DIFY_INNER_API_URL:-http://api:5001***REMOVED***
+  ENDPOINT_URL_TEMPLATE: ${ENDPOINT_URL_TEMPLATE:-http://localhost/e/{hook_id***REMOVED******REMOVED***
+  MARKETPLACE_ENABLED: ${MARKETPLACE_ENABLED:-true***REMOVED***
+  MARKETPLACE_API_URL: ${MARKETPLACE_API_URL:-https://marketplace.dify.ai***REMOVED***
+  FORCE_VERIFYING_SIGNATURE: ${FORCE_VERIFYING_SIGNATURE:-true***REMOVED***
+  PLUGIN_PYTHON_ENV_INIT_TIMEOUT: ${PLUGIN_PYTHON_ENV_INIT_TIMEOUT:-120***REMOVED***
+  PLUGIN_MAX_EXECUTION_TIMEOUT: ${PLUGIN_MAX_EXECUTION_TIMEOUT:-600***REMOVED***
+  PIP_MIRROR_URL: ${PIP_MIRROR_URL:-***REMOVED***
 
 services:
   # API service
   api:
-    image: langgenius/dify-api:0.14.2
+    image: langgenius/dify-api:1.0.1
     restart: always
     environment:
       # Use the shared environment variables.
@@ -399,6 +442,10 @@ services:
       SENTRY_DSN: ${API_SENTRY_DSN:-***REMOVED***
       SENTRY_TRACES_SAMPLE_RATE: ${API_SENTRY_TRACES_SAMPLE_RATE:-1.0***REMOVED***
       SENTRY_PROFILES_SAMPLE_RATE: ${API_SENTRY_PROFILES_SAMPLE_RATE:-1.0***REMOVED***
+      PLUGIN_REMOTE_INSTALL_HOST: ${EXPOSE_PLUGIN_DEBUGGING_HOST:-localhost***REMOVED***
+      PLUGIN_REMOTE_INSTALL_PORT: ${EXPOSE_PLUGIN_DEBUGGING_PORT:-5003***REMOVED***
+      PLUGIN_MAX_PACKAGE_SIZE: ${PLUGIN_MAX_PACKAGE_SIZE:-52428800***REMOVED***
+      INNER_API_KEY_FOR_PLUGIN: ${PLUGIN_DIFY_INNER_API_KEY:-QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1***REMOVED***
     depends_on:
       - db
       - redis
@@ -409,12 +456,12 @@ services:
       - ssrf_proxy_network
       - default
     extra_hosts:
-      - host.docker.internal:host-gateway
+      - "host.docker.internal:host-gateway"
 
   # worker service
   # The Celery worker for processing the queue.
   worker:
-    image: langgenius/dify-api:0.14.2
+    image: langgenius/dify-api:1.0.1
     restart: always
     environment:
       # Use the shared environment variables.
@@ -424,6 +471,8 @@ services:
       SENTRY_DSN: ${API_SENTRY_DSN:-***REMOVED***
       SENTRY_TRACES_SAMPLE_RATE: ${API_SENTRY_TRACES_SAMPLE_RATE:-1.0***REMOVED***
       SENTRY_PROFILES_SAMPLE_RATE: ${API_SENTRY_PROFILES_SAMPLE_RATE:-1.0***REMOVED***
+      PLUGIN_MAX_PACKAGE_SIZE: ${PLUGIN_MAX_PACKAGE_SIZE:-52428800***REMOVED***
+      INNER_API_KEY_FOR_PLUGIN: ${PLUGIN_DIFY_INNER_API_KEY:-QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1***REMOVED***
     depends_on:
       - db
       - redis
@@ -434,11 +483,11 @@ services:
       - ssrf_proxy_network
       - default
     extra_hosts:
-      - host.docker.internal:host-gateway
+      - "host.docker.internal:host-gateway"
 
   # Frontend web application.
   web:
-    image: langgenius/dify-web:0.14.2
+    image: langgenius/dify-web:1.0.1
     restart: always
     environment:
       CONSOLE_API_URL: ${CONSOLE_API_URL:-***REMOVED***
@@ -447,8 +496,14 @@ services:
       NEXT_TELEMETRY_DISABLED: ${NEXT_TELEMETRY_DISABLED:-0***REMOVED***
       TEXT_GENERATION_TIMEOUT_MS: ${TEXT_GENERATION_TIMEOUT_MS:-60000***REMOVED***
       CSP_WHITELIST: ${CSP_WHITELIST:-***REMOVED***
-    extra_hosts:
-      - host.docker.internal:host-gateway
+      MARKETPLACE_API_URL: ${MARKETPLACE_API_URL:-https://marketplace.dify.ai***REMOVED***
+      MARKETPLACE_URL: ${MARKETPLACE_URL:-https://marketplace.dify.ai***REMOVED***
+      TOP_K_MAX_VALUE: ${TOP_K_MAX_VALUE:-***REMOVED***
+      INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH: ${INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH:-***REMOVED***
+      PM2_INSTANCES: ${PM2_INSTANCES:-2***REMOVED***
+      LOOP_NODE_MAX_COUNT: ${LOOP_NODE_MAX_COUNT:-100***REMOVED***
+      MAX_TOOLS_NUM: ${MAX_TOOLS_NUM:-10***REMOVED***
+      MAX_PARALLEL_LIMIT: ${MAX_PARALLEL_LIMIT:-10***REMOVED***
 
   # The postgres database.
   db:
@@ -468,7 +523,7 @@ services:
     volumes:
       - ./volumes/db/data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD', 'pg_isready']
+      test: [ 'CMD', 'pg_isready' ]
       interval: 1s
       timeout: 3s
       retries: 30
@@ -485,7 +540,7 @@ services:
     # Set the redis password when startup redis server.
     command: redis-server --requirepass ${REDIS_PASSWORD:-difyai123456***REMOVED***
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: [ 'CMD', 'redis-cli', 'ping' ]
 
   # The DifySandbox
   sandbox:
@@ -504,10 +559,39 @@ services:
       SANDBOX_PORT: ${SANDBOX_PORT:-8194***REMOVED***
     volumes:
       - ./volumes/sandbox/dependencies:/dependencies
+      - ./volumes/sandbox/conf:/conf
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:8194/health']
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:8194/health' ]
     networks:
       - ssrf_proxy_network
+
+  # plugin daemon
+  plugin_daemon:
+    image: langgenius/dify-plugin-daemon:0.0.4-local
+    restart: always
+    environment:
+      # Use the shared environment variables.
+      <<: *shared-api-worker-env
+      DB_DATABASE: ${DB_PLUGIN_DATABASE:-dify_plugin***REMOVED***
+      SERVER_PORT: ${PLUGIN_DAEMON_PORT:-5002***REMOVED***
+      SERVER_KEY: ${PLUGIN_DAEMON_KEY:-lYkiYYT6owG+71oLerGzA7GXCgOT++6ovaezWAjpCjf+Sjc3ZtU+qUEi***REMOVED***
+      MAX_PLUGIN_PACKAGE_SIZE: ${PLUGIN_MAX_PACKAGE_SIZE:-52428800***REMOVED***
+      PPROF_ENABLED: ${PLUGIN_PPROF_ENABLED:-false***REMOVED***
+      DIFY_INNER_API_URL: ${PLUGIN_DIFY_INNER_API_URL:-http://api:5001***REMOVED***
+      DIFY_INNER_API_KEY: ${PLUGIN_DIFY_INNER_API_KEY:-QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1***REMOVED***
+      PLUGIN_REMOTE_INSTALLING_HOST: ${PLUGIN_DEBUGGING_HOST:-0.0.0.0***REMOVED***
+      PLUGIN_REMOTE_INSTALLING_PORT: ${PLUGIN_DEBUGGING_PORT:-5003***REMOVED***
+      PLUGIN_WORKING_PATH: ${PLUGIN_WORKING_PATH:-/app/storage/cwd***REMOVED***
+      FORCE_VERIFYING_SIGNATURE: ${FORCE_VERIFYING_SIGNATURE:-true***REMOVED***
+      PYTHON_ENV_INIT_TIMEOUT: ${PLUGIN_PYTHON_ENV_INIT_TIMEOUT:-120***REMOVED***
+      PLUGIN_MAX_EXECUTION_TIMEOUT: ${PLUGIN_MAX_EXECUTION_TIMEOUT:-600***REMOVED***
+      PIP_MIRROR_URL: ${PIP_MIRROR_URL:-***REMOVED***
+    ports:
+      - "${EXPOSE_PLUGIN_DEBUGGING_PORT:-5003***REMOVED***:${PLUGIN_DEBUGGING_PORT:-5003***REMOVED***"
+    volumes:
+      - ./volumes/plugin_daemon:/app/storage
+    depends_on:
+      - db
 
   # ssrf_proxy server
   # for more information, please refer to
@@ -518,12 +602,7 @@ services:
     volumes:
       - ./ssrf_proxy/squid.conf.template:/etc/squid/squid.conf.template
       - ./ssrf_proxy/docker-entrypoint.sh:/docker-entrypoint-mount.sh
-    entrypoint:
-      [
-        'sh',
-        '-c',
-        "cp /docker-entrypoint-mount.sh /docker-entrypoint.sh && sed -i 's/\r$$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh && /docker-entrypoint.sh",
-  ***REMOVED***
+    entrypoint: [ 'sh', '-c', "cp /docker-entrypoint-mount.sh /docker-entrypoint.sh && sed -i 's/\r$$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh && /docker-entrypoint.sh" ]
     environment:
       # pls clearly modify the squid env vars to fit your network environment.
       HTTP_PORT: ${SSRF_HTTP_PORT:-3128***REMOVED***
@@ -552,8 +631,8 @@ services:
       - CERTBOT_EMAIL=${CERTBOT_EMAIL***REMOVED***
       - CERTBOT_DOMAIN=${CERTBOT_DOMAIN***REMOVED***
       - CERTBOT_OPTIONS=${CERTBOT_OPTIONS:-***REMOVED***
-    entrypoint: ['/docker-entrypoint.sh']
-    command: ['tail', '-f', '/dev/null']
+    entrypoint: [ '/docker-entrypoint.sh' ]
+    command: [ 'tail', '-f', '/dev/null' ]
 
   # The nginx reverse proxy.
   # used for reverse proxying the API service and Web service.
@@ -570,12 +649,7 @@ services:
       - ./volumes/certbot/conf/live:/etc/letsencrypt/live # cert dir (with certbot container***REMOVED***
       - ./volumes/certbot/conf:/etc/letsencrypt
       - ./volumes/certbot/www:/var/www/html
-    entrypoint:
-      [
-        'sh',
-        '-c',
-        "cp /docker-entrypoint-mount.sh /docker-entrypoint.sh && sed -i 's/\r$$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh && /docker-entrypoint.sh",
-  ***REMOVED***
+    entrypoint: [ 'sh', '-c', "cp /docker-entrypoint-mount.sh /docker-entrypoint.sh && sed -i 's/\r$$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh && /docker-entrypoint.sh" ]
     environment:
       NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-_***REMOVED***
       NGINX_HTTPS_ENABLED: ${NGINX_HTTPS_ENABLED:-false***REMOVED***
@@ -599,16 +673,6 @@ services:
     ports:
       - '18000:${NGINX_PORT:-80***REMOVED***'
       - '${EXPOSE_NGINX_SSL_PORT:-443***REMOVED***:${NGINX_SSL_PORT:-443***REMOVED***'
-
-  # The TiDB vector store.
-  # For production use, please refer to https://github.com/pingcap/tidb-docker-compose
-  tidb:
-    image: pingcap/tidb:v8.4.0
-    profiles:
-      - tidb
-    command:
-      - --store=unistore
-    restart: always
 
   # The Weaviate vector store.
   weaviate:
@@ -667,7 +731,7 @@ services:
     working_dir: /opt/couchbase
     stdin_open: true
     tty: true
-    entrypoint: [""]
+    entrypoint: [ "" ]
     command: sh -c "/opt/couchbase/init/init-cbserver.sh"
     volumes:
       - ./volumes/couchbase/data:/opt/couchbase/var/lib/couchbase/data
@@ -693,10 +757,15 @@ services:
       POSTGRES_DB: ${PGVECTOR_POSTGRES_DB:-dify***REMOVED***
       # postgres data directory
       PGDATA: ${PGVECTOR_PGDATA:-/var/lib/postgresql/data/pgdata***REMOVED***
+      # pg_bigm module for full text search
+      PG_BIGM: ${PGVECTOR_PG_BIGM:-false***REMOVED***
+      PG_BIGM_VERSION: ${PGVECTOR_PG_BIGM_VERSION:-1.2-20240606***REMOVED***
     volumes:
       - ./volumes/pgvector/data:/var/lib/postgresql/data
+      - ./pgvector/docker-entrypoint.sh:/docker-entrypoint.sh
+    entrypoint: [ '/docker-entrypoint.sh' ]
     healthcheck:
-      test: ['CMD', 'pg_isready']
+      test: [ 'CMD', 'pg_isready' ]
       interval: 1s
       timeout: 3s
       retries: 30
@@ -718,7 +787,7 @@ services:
     volumes:
       - ./volumes/pgvecto_rs/data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD', 'pg_isready']
+      test: [ 'CMD', 'pg_isready' ]
       interval: 1s
       timeout: 3s
       retries: 30
@@ -783,7 +852,7 @@ services:
       - ./volumes/milvus/etcd:/etcd
     command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
     healthcheck:
-      test: ['CMD', 'etcdctl', 'endpoint', 'health']
+      test: [ 'CMD', 'etcdctl', 'endpoint', 'health' ]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -802,7 +871,7 @@ services:
       - ./volumes/milvus/minio:/minio_data
     command: minio server /minio_data --console-address ":9001"
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live' ]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -811,10 +880,10 @@ services:
 
   milvus-standalone:
     container_name: milvus-standalone
-    image: milvusdb/milvus:v2.3.1
+    image: milvusdb/milvus:v2.5.0-beta
     profiles:
       - milvus
-    command: ['milvus', 'run', 'standalone']
+    command: [ 'milvus', 'run', 'standalone' ]
     environment:
       ETCD_ENDPOINTS: ${ETCD_ENDPOINTS:-etcd:2379***REMOVED***
       MINIO_ADDRESS: ${MINIO_ADDRESS:-minio:9000***REMOVED***
@@ -822,7 +891,7 @@ services:
     volumes:
       - ./volumes/milvus/milvus:/var/lib/milvus
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:9091/healthz']
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:9091/healthz' ]
       interval: 30s
       start_period: 90s
       timeout: 20s
@@ -873,6 +942,28 @@ services:
     depends_on:
       - opensearch
 
+  # opengauss vector database.
+  opengauss:
+    image: opengauss/opengauss:7.0.0-RC1
+    profiles:
+      - opengauss
+    privileged: true
+    restart: always
+    environment:
+      GS_USERNAME: ${OPENGAUSS_USER:-postgres***REMOVED***
+      GS_PASSWORD: ${OPENGAUSS_PASSWORD:-Dify@123***REMOVED***
+      GS_PORT: ${OPENGAUSS_PORT:-6600***REMOVED***
+      GS_DB: ${OPENGAUSS_DATABASE:-dify***REMOVED***
+    volumes:
+      - ./volumes/opengauss/data:/var/lib/opengauss/data
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -lntp | grep tcp6 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    ports:
+      - ${OPENGAUSS_PORT:-6600***REMOVED***:${OPENGAUSS_PORT:-6600***REMOVED***
+
   # MyScale vector database
   myscale:
     container_name: myscale
@@ -895,22 +986,30 @@ services:
     container_name: elasticsearch
     profiles:
       - elasticsearch
+      - elasticsearch-ja
     restart: always
     volumes:
+      - ./elasticsearch/docker-entrypoint.sh:/docker-entrypoint-mount.sh
       - dify_es01_data:/usr/share/elasticsearch/data
     environment:
       ELASTIC_PASSWORD: ${ELASTICSEARCH_PASSWORD:-elastic***REMOVED***
+      VECTOR_STORE: ${VECTOR_STORE:-***REMOVED***
       cluster.name: dify-es-cluster
       node.name: dify-es0
       discovery.type: single-node
-      xpack.license.self_generated.type: trial
+      xpack.license.self_generated.type: basic
       xpack.security.enabled: 'true'
       xpack.security.enrollment.enabled: 'false'
       xpack.security.http.ssl.enabled: 'false'
     ports:
       - ${ELASTICSEARCH_PORT:-9200***REMOVED***:9200
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    entrypoint: [ 'sh', '-c', "sh /docker-entrypoint-mount.sh" ]
     healthcheck:
-      test: ['CMD', 'curl', '-s', 'http://localhost:9200/_cluster/health?pretty']
+      test: [ 'CMD', 'curl', '-s', 'http://localhost:9200/_cluster/health?pretty' ]
       interval: 30s
       timeout: 10s
       retries: 50
@@ -938,7 +1037,7 @@ services:
     ports:
       - ${KIBANA_PORT:-5601***REMOVED***:5601
     healthcheck:
-      test: ['CMD-SHELL', 'curl -s http://localhost:5601 >/dev/null || exit 1']
+      test: [ 'CMD-SHELL', 'curl -s http://localhost:5601 >/dev/null || exit 1' ]
       interval: 30s
       timeout: 10s
       retries: 3
