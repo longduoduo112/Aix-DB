@@ -76,6 +76,11 @@ class DiFyRequest:
             # 构建请求参数
             dify_service_url, body_params, headers = self._build_request(chat_id, cleaned_query, app_key, qa_type***REMOVED***
 
+            # 收集流式输出结果
+            t02_answer_data = []
+            # 收集业务数据流式输出结果
+            t04_answer_data = {***REMOVED***
+
             async with aiohttp.ClientSession(read_bufsize=1024 * 16***REMOVED*** as session:
                 async with session.post(
                     dify_service_url,
@@ -114,13 +119,8 @@ class DiFyRequest:
                                             if data_type == DataTypeEnum.ANSWER.value[0]:
                                                 await self.send_message(
                                                     res,
-                                                    qa_context,
                                                     answer,
                                                   ***REMOVED***"data": {"messageType": "begin"***REMOVED***, "dataType": data_type***REMOVED***,
-                                                    qa_type,
-                                                    conversation_id,
-                                                    message_id,
-                                                    task_id,
                                                 ***REMOVED***
                                         elif event_list[1] == "1":
                                             # 输出结束
@@ -128,29 +128,19 @@ class DiFyRequest:
                                             if data_type == DataTypeEnum.ANSWER.value[0]:
                                                 await self.send_message(
                                                     res,
-                                                    qa_context,
                                                     answer,
                                                   ***REMOVED***"data": {"messageType": "end"***REMOVED***, "dataType": data_type***REMOVED***,
-                                                    qa_type,
-                                                    conversation_id,
-                                                    message_id,
-                                                    task_id,
                                                 ***REMOVED***
 
                                             # 输出业务数据
                                             elif bus_data and data_type == DataTypeEnum.BUS_DATA.value[0]:
                                                 res_data = process(json.loads(bus_data***REMOVED***["data"]***REMOVED***
-                                                # logging.info(f"chart_data: {res_data***REMOVED***"***REMOVED***
                                                 await self.send_message(
                                                     res,
-                                                    qa_context,
                                                     answer,
                                                   ***REMOVED***"data": res_data, "dataType": data_type***REMOVED***,
-                                                    qa_type,
-                                                    conversation_id,
-                                                    message_id,
-                                                    task_id,
                                                 ***REMOVED***
+                                                t04_answer_data = {"data": res_data, "dataType": data_type***REMOVED***
 
                                             data_type = ""
 
@@ -159,14 +149,11 @@ class DiFyRequest:
                                         if data_type == DataTypeEnum.ANSWER.value[0]:
                                             await self.send_message(
                                                 res,
-                                                qa_context,
                                                 answer,
                                               ***REMOVED***"data": {"messageType": "continue", "content": answer***REMOVED***, "dataType": data_type***REMOVED***,
-                                                qa_type,
-                                                conversation_id,
-                                                message_id,
-                                                task_id,
                                             ***REMOVED***
+
+                                            t02_answer_data.append(answer***REMOVED***
 
                                         # 这里设置业务数据
                                         if data_type == DataTypeEnum.BUS_DATA.value[0]:
@@ -188,6 +175,21 @@ class DiFyRequest:
                                         + "\n\n"
                                     ***REMOVED***
 
+                                elif DiFyCodeEnum.MESSAGE_END.value[0] == event_name:
+                                    t02_message_json = {
+                                        "data": {"messageType": "continue", "content": "".join(t02_answer_data***REMOVED******REMOVED***,
+                                        "dataType": DataTypeEnum.ANSWER.value[0],
+                                    ***REMOVED***
+                                    print(t02_message_json***REMOVED***
+
+                                    if t02_message_json:
+                                        await self._save_message(t02_message_json, qa_context, conversation_id, message_id, task_id, qa_type***REMOVED***
+                                    if t04_answer_data:
+                                        await self._save_message(t04_answer_data, qa_context, conversation_id, message_id, task_id, qa_type***REMOVED***
+
+                                    t02_answer_data = []
+                                    t04_answer_data = {***REMOVED***
+
         except Exception as e:
             logging.error(f"Error during get_answer: {e***REMOVED***"***REMOVED***
             traceback.print_exception(e***REMOVED***
@@ -195,7 +197,8 @@ class DiFyRequest:
         finally:
             await self.res_end(res***REMOVED***
 
-    async def handle_think_tag(self, answer***REMOVED***:
+    @staticmethod
+    async def handle_think_tag(answer***REMOVED***:
         """
         处理<think>标签内的内容
         :param answer
@@ -205,10 +208,10 @@ class DiFyRequest:
 
         return think_content, remaining_content
 
-    async def save_message(self, response, message, qa_context, conversation_id, message_id, task_id, qa_type***REMOVED***:
+    @staticmethod
+    async def _save_message(message, qa_context, conversation_id, message_id, task_id, qa_type***REMOVED***:
         """
             保存消息记录并发送SSE数据
-        :param response:
         :param message:
         :param qa_context:
         :param conversation_id:
@@ -226,9 +229,8 @@ class DiFyRequest:
             await add_question_record(
                 qa_context.token, conversation_id, message_id, task_id, qa_context.chat_id, qa_context.question, "", message, qa_type
             ***REMOVED***
-        await response.write("data:" + json.dumps(message, ensure_ascii=False***REMOVED*** + "\n\n"***REMOVED***
 
-    async def send_message(self, response, qa_context, answer, message, qa_type, conversation_id, message_id, task_id***REMOVED***:
+    async def send_message(self, response, answer, message***REMOVED***:
         """
         SSE 格式发送数据，每一行以 data: 开头
         """
@@ -241,10 +243,9 @@ class DiFyRequest:
                 "data": {"messageType": "continue", "content": "> " + think_content.replace("\n", ""***REMOVED*** + "\n\n" + remaining_content***REMOVED***,
                 "dataType": "t02",
             ***REMOVED***
-            await self.save_message(response, message, qa_context, conversation_id, message_id, task_id, qa_type***REMOVED***
-
+            await response.write("data:" + json.dumps(message, ensure_ascii=False***REMOVED*** + "\n\n"***REMOVED***
         else:
-            await self.save_message(response, message, qa_context, conversation_id, message_id, task_id, qa_type***REMOVED***
+            await response.write("data:" + json.dumps(message, ensure_ascii=False***REMOVED*** + "\n\n"***REMOVED***
 
     @staticmethod
     async def res_begin(res, chat_id***REMOVED***:
