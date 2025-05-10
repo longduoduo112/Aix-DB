@@ -203,10 +203,32 @@ class DiFyRequest:
         处理<think>标签内的内容
         :param answer
         """
-        think_content = re.search(r"<think>(.*?***REMOVED***</think>", answer, re.DOTALL***REMOVED***.group(1***REMOVED***
-        remaining_content = re.sub(r"<think>.*?</think>", "", answer, flags=re.DOTALL***REMOVED***.strip(***REMOVED***
+        """
+        处理<think>标签内的内容，或JSON格式的thoughts字段
+        :param answer
+        """
+        think_content = ""
+        remaining_content = answer
 
-        return think_content, remaining_content
+        # 会遇到answer可能不能解析到，先尝试解析为JSON
+        try:
+            data = json.loads(answer***REMOVED***
+            if isinstance(data, dict***REMOVED*** and "thoughts" in data:
+                think_content = data["thoughts"]
+                remaining_content = answer
+                return think_content, remaining_content
+        except Exception:
+            pass
+
+        # 再尝试正则提取<think>标签
+        match = re.search(r"<think>(.*?***REMOVED***</think>", answer, re.DOTALL***REMOVED***
+        if match:
+            think_content = match.group(1***REMOVED***
+            remaining_content = re.sub(r"<think>.*?</think>", "", answer, flags=re.DOTALL***REMOVED***.strip(***REMOVED***
+            return think_content, remaining_content
+
+        # 如果都没有，返回空
+        return "", answer
 
     @staticmethod
     async def _save_message(message, qa_context, conversation_id, message_id, task_id, qa_type***REMOVED***:
