@@ -1,45 +1,43 @@
 <script lang="tsx" setup>
-
 /**
 使用:
-
+ 
 <Pagination
   v-model:page="currentPage"
   :page-count="100"
   @change="handleChangePage"
 />
-
+ 
 const currentPage = ref(2***REMOVED***
 const handleChangePage = (n: number***REMOVED*** => {
   console.log('nnnn', n***REMOVED***
 ***REMOVED***
-
+ 
  */
 
 defineOptions({
-  name: 'Pagination'
+  name: 'Pagination',
 ***REMOVED******REMOVED***
 const props = defineProps({
   page: {
     type: Number,
-    default: 1
+    default: 1,
   ***REMOVED***,
   pageCount: {
     type: Number,
-    default: 1
-  ***REMOVED***
+    default: 1,
+  ***REMOVED***,
 ***REMOVED******REMOVED***
-
-const {
-  page,
-  pageCount
-***REMOVED*** = toRefs(props***REMOVED***
 
 const emits = defineEmits([
   'update:page',
-  'change'
+  'change',
 ]***REMOVED***
 
+const {
+  page,
+  pageCount,
+***REMOVED*** = toRefs(props***REMOVED***
 
 /**
  * 当前页码（非数组下标）
@@ -51,7 +49,7 @@ watch(
   (***REMOVED*** => activePage.value,
   (***REMOVED*** => {
     emits('update:page', activePage.value***REMOVED***
-  ***REMOVED***
+  ***REMOVED***,
 ***REMOVED***
 
 watch(
@@ -60,8 +58,8 @@ watch(
     activePage.value = page.value
   ***REMOVED***,
 ***REMOVED***
-    deep: true
-  ***REMOVED***
+    deep: true,
+  ***REMOVED***,
 ***REMOVED***
 
 const handleToChangePage = (***REMOVED*** => {
@@ -91,7 +89,7 @@ const showGroupsAuto = computed((***REMOVED*** => {
 const allPageNumbers = computed((***REMOVED*** => {
   return Array
     .from({
-      length: pageCount.value
+      length: pageCount.value,
     ***REMOVED******REMOVED***
     .map((_, idx***REMOVED*** => idx + 1***REMOVED***
 ***REMOVED******REMOVED***
@@ -157,7 +155,7 @@ const groupPageRange = computed((***REMOVED*** => {
 
   return {
     startIndex,
-    endIndex
+    endIndex,
   ***REMOVED***
 ***REMOVED******REMOVED***
 
@@ -222,7 +220,7 @@ const RenderSinglePageContainer = ({
   active = false,
   disabled = false,
   onClick = (***REMOVED*** => { ***REMOVED***,
-  ghost = false
+  ghost = false,
 ***REMOVED***: SinglePageContainerType & SetupContext['attrs'], VNode: SetupContext***REMOVED*** => {
   const slots = VNode.slots.default
     ? VNode.slots.default(***REMOVED***
@@ -231,7 +229,7 @@ const RenderSinglePageContainer = ({
   const defaultClassName = [
     'flex items-center justify-center min-w-30px h-30px c-primary cursor-pointer select-none',
     'rounded-3px c-#fff',
-    'b'
+    'b',
   ]
 
   const activeClassName = active ? 'c-primary b-primary b-solid' : ''
@@ -244,7 +242,7 @@ const RenderSinglePageContainer = ({
         [
           ...defaultClassName,
           activeClassName,
-          disabledClassName
+          disabledClassName,
     ***REMOVED***
       ***REMOVED***
     >{ slots ***REMOVED***</div>
@@ -255,7 +253,7 @@ const RenderSinglePageContainer = ({
 /**
  * 页码容器
  */
-const RenderSinglePageNumber = ({ num = 1, ...attrs ***REMOVED***: { num: number; key?: number; ***REMOVED*** & SinglePageContainerType***REMOVED*** => {
+const RenderSinglePageNumber = ({ num = 1, ...attrs ***REMOVED***: { num: number, key?: number ***REMOVED*** & SinglePageContainerType***REMOVED*** => {
   const onClick = (***REMOVED*** => {
     activePage.value = num
     handleToChangePage(***REMOVED***
@@ -275,21 +273,23 @@ const RenderPartOfNavNumbers = (***REMOVED*** => {
   return (
     <>
     ***REMOVED***
-        showOverflowPrev.value ? <RenderSinglePageNumber num={1***REMOVED***/> : null
+        showOverflowPrev.value ? <RenderSinglePageNumber num={1***REMOVED*** /> : null
       ***REMOVED***
     ***REMOVED***
         showOverflowPrev.value
-          ? <RenderSinglePageContainer
-            onClick={(***REMOVED*** => handleToQuickPrev(***REMOVED******REMOVED***
-            class={'group'***REMOVED***
-***REMOVED***
-  ***REMOVED***class="i-bx:dots-horizontal-rounded group-hover:i-ic:twotone-keyboard-double-arrow-left"></div>
-          </RenderSinglePageContainer>
+          ? (
+              <RenderSinglePageContainer
+                onClick={(***REMOVED*** => handleToQuickPrev(***REMOVED******REMOVED***
+                class={'group'***REMOVED***
+    ***REMOVED***
+      ***REMOVED***class="i-bx:dots-horizontal-rounded group-hover:i-ic:twotone-keyboard-double-arrow-left"></div>
+              </RenderSinglePageContainer>
+            ***REMOVED***
           : null
       ***REMOVED***
 
     ***REMOVED***
-        getGroupPageNumbers.value.map(num => (
+        getGroupPageNumbers.value.map((num***REMOVED*** => (
           <RenderSinglePageNumber
             active={activePage.value === num***REMOVED***
             num={num***REMOVED***
@@ -299,21 +299,22 @@ const RenderPartOfNavNumbers = (***REMOVED*** => {
 
     ***REMOVED***
         showOverflowNext.value
-          ? <RenderSinglePageContainer
-            onClick={(***REMOVED*** => handleToQuickNext(***REMOVED******REMOVED***
-            class={'group'***REMOVED***
-***REMOVED***
-  ***REMOVED***class="i-bx:dots-horizontal-rounded group-hover:i-ic:twotone-keyboard-double-arrow-right"></div>
-          </RenderSinglePageContainer>
+          ? (
+              <RenderSinglePageContainer
+                onClick={(***REMOVED*** => handleToQuickNext(***REMOVED******REMOVED***
+                class={'group'***REMOVED***
+    ***REMOVED***
+      ***REMOVED***class="i-bx:dots-horizontal-rounded group-hover:i-ic:twotone-keyboard-double-arrow-right"></div>
+              </RenderSinglePageContainer>
+            ***REMOVED***
           : null
       ***REMOVED***
     ***REMOVED***
-        showOverflowNext.value ? <RenderSinglePageNumber num={pageCount.value***REMOVED***/> : null
+        showOverflowNext.value ? <RenderSinglePageNumber num={pageCount.value***REMOVED*** /> : null
       ***REMOVED***
     </>
   ***REMOVED***
 ***REMOVED***
-
 ***REMOVED***
 
 

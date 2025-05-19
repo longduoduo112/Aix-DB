@@ -1,22 +1,22 @@
-import 'virtual:uno.css'
-
-import { setupRouter ***REMOVED*** from '@/router'
-import { setupStore ***REMOVED*** from '@/store'
-
 import App from '@/App.vue'
 
 import InstallGlobalComponents from '@/components'
+import { setupRouter ***REMOVED*** from '@/router'
+
+import { setupStore ***REMOVED*** from '@/store'
+
+import 'virtual:uno.css'
 
 const app = createApp(App***REMOVED***
 
 function setupPlugins(***REMOVED*** {
-    app.use(InstallGlobalComponents***REMOVED***
+  app.use(InstallGlobalComponents***REMOVED***
 ***REMOVED***
 
 async function setupApp(***REMOVED*** {
-    setupStore(app***REMOVED***
-    await setupRouter(app***REMOVED***
-    app.mount('#app'***REMOVED***
+  setupStore(app***REMOVED***
+  await setupRouter(app***REMOVED***
+  app.mount('#app'***REMOVED***
 ***REMOVED***
 
 setupPlugins(***REMOVED***

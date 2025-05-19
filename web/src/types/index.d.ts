@@ -1,7 +1,7 @@
-import type { getFilterResponse ***REMOVED*** from '@/store/utils/mixin'
+import type { AxiosRequestConfig ***REMOVED*** from 'axios'
 
 import type router from '@/router'
-import type { AxiosRequestConfig, GenericAbortSignal ***REMOVED*** from 'axios'
+import type { getFilterResponse ***REMOVED*** from '@/store/utils/mixin'
 
 declare module 'vue' {
   /**

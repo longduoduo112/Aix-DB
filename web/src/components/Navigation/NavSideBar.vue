@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-
 const router = useRouter(***REMOVED***
 
 
@@ -7,8 +6,8 @@ const testRoutesNavs = computed((***REMOVED*** => {
   const routes = router.getRoutes(***REMOVED***
   const _routes = routes.filter((routeItem***REMOVED*** => {
     return (routeItem.name !== 'UserLogin'***REMOVED***
-    && !routeItem.redirect
-    && routeItem?.meta?.title
+      && !routeItem.redirect
+      && routeItem?.meta?.title
   ***REMOVED******REMOVED***
   return _routes.sort((prev, next***REMOVED*** => {
     return prev.meta.title! > next.meta.title!
@@ -20,7 +19,7 @@ const testRoutesNavs = computed((***REMOVED*** => {
 /**
  * 随机生成测试 params hash
  */
-const extractParamsFromRoute = (routePath***REMOVED*** =>{
+const extractParamsFromRoute = (routePath***REMOVED*** => {
   const paramRegex = /:([^/?]+***REMOVED***/g
   const params = {***REMOVED***
 
@@ -35,11 +34,9 @@ const extractParamsFromRoute = (routePath***REMOVED*** =>{
 const handleNavigateTo = (routeItem: RouteRecordRaw***REMOVED*** => {
   router.push({
     name: routeItem.name,
-    params: extractParamsFromRoute(routeItem.path***REMOVED***
+    params: extractParamsFromRoute(routeItem.path***REMOVED***,
   ***REMOVED******REMOVED***
 ***REMOVED***
-
-
 ***REMOVED***
 
 ***REMOVED***
@@ -60,7 +57,6 @@ const handleNavigateTo = (routeItem: RouteRecordRaw***REMOVED*** => {
 ***REMOVED***
 
 <style lang="scss" scoped>
-
 .navigation-nav-sidebar-container {
   --at-apply: flex flex-col;
   --at-apply: w-full h-full overflow-y-auto b-1 b-solid;

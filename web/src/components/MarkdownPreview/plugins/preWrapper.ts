@@ -12,14 +12,13 @@ function capitalizeFirstLetter(str***REMOVED*** {
 ***REMOVED***
 
 const getBaseLanguageName = (nameOrAlias, components = PrismJsComponents***REMOVED*** => {
-
   const _nameOrAlias = nameOrAlias.toLowerCase(***REMOVED***
 
   const allLanguages = components.languages
   const allLanguageKeys = Object.keys(allLanguages***REMOVED***
 
   const lang = {
-    value: capitalizeFirstLetter(nameOrAlias || 'markdown'***REMOVED***
+    value: capitalizeFirstLetter(nameOrAlias || 'markdown'***REMOVED***,
   ***REMOVED***
 
   for (let index = 0; index < allLanguageKeys.length; index++***REMOVED*** {
@@ -38,7 +37,6 @@ const getBaseLanguageName = (nameOrAlias, components = PrismJsComponents***REMOV
     ***REMOVED***
 
     if (Array.isArray(alias***REMOVED******REMOVED*** {
-
       if (aliasTitles && aliasTitles[_nameOrAlias]***REMOVED*** {
         lang.value = aliasTitles[_nameOrAlias]
         break
@@ -76,16 +74,16 @@ export function preWrapperPlugin(md: MarkdownIt, options: Options***REMOVED*** {
     const content = fence(...args***REMOVED***
     return (
 ***REMOVED***
-      <div class="markdown-code-wrapper flex language-${ lang ***REMOVED***${ getAdaptiveThemeMarker(options***REMOVED*** ***REMOVED***${ active ***REMOVED***">
+      <div class="markdown-code-wrapper flex language-${lang***REMOVED***${getAdaptiveThemeMarker(options***REMOVED******REMOVED***${active***REMOVED***">
         <div class="markdown-code-header">
-          <span class="markdown-code-lang">${ getBaseLanguageName(lang***REMOVED*** ***REMOVED***</span>
+          <span class="markdown-code-lang">${getBaseLanguageName(lang***REMOVED******REMOVED***</span>
           <button class="markdown-code-copy">
   ***REMOVED***class="markdown-copy-icon"></div>
             <span class="markdown-copy-text default">复制代码</span>
             <span class="markdown-copy-text done">已复制</span>
 ***REMOVED***
 ***REMOVED***
-        ${ content ***REMOVED***
+        ${content***REMOVED***
 ***REMOVED***
 ***REMOVED***
     ***REMOVED***
@@ -99,7 +97,7 @@ export function getAdaptiveThemeMarker(options: Options***REMOVED*** {
 export function extractTitle(info: string, html = false***REMOVED*** {
   if (html***REMOVED*** {
     return (
-      info.replace(/<!--[^]*?-->/g, ''***REMOVED***.match(/data-title="(.*?***REMOVED***"/***REMOVED***?.[1] || ''
+      info.replace(/<!--[\s\S]*?-->/g, ''***REMOVED***.match(/data-title="(.*?***REMOVED***"/***REMOVED***?.[1] || ''
     ***REMOVED***
   ***REMOVED***
   return info.match(/\[(.****REMOVED***\]/***REMOVED***?.[1] || extractLang(info***REMOVED*** || 'txt'
@@ -109,8 +107,8 @@ function extractLang(info: string***REMOVED*** {
   return info
     .trim(***REMOVED***
     .replace(/=(\d****REMOVED***/, ''***REMOVED***
-    .replace(/:(no-***REMOVED***?line-numbers({| |$|=\d****REMOVED***.*/, ''***REMOVED***
-    .replace(/(-vue|{| ***REMOVED***.*$/, ''***REMOVED***
+    .replace(/:(no-***REMOVED***?line-numbers(\{| |$|=\d****REMOVED***.*/, ''***REMOVED***
+    .replace(/(-vue|\{| ***REMOVED***.*$/, ''***REMOVED***
     .replace(/^vue-html$/, 'template'***REMOVED***
     .replace(/^ansi$/, ''***REMOVED***
 ***REMOVED***

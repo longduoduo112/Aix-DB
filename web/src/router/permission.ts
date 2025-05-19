@@ -1,14 +1,12 @@
-import NProgress from 'nprogress'
 import type { Router ***REMOVED*** from 'vue-router'
+import NProgress from 'nprogress'
 
 NProgress.configure({
-  showSpinner: false
+  showSpinner: false,
 ***REMOVED******REMOVED***
 
 export function createRouterGuards(router: Router***REMOVED*** {
-
   router.beforeEach(async (to, from, next***REMOVED*** => {
-
     NProgress.start(***REMOVED***
     next(***REMOVED***
   ***REMOVED******REMOVED***

@@ -1,4 +1,13 @@
 <script lang="tsx" setup>
+const props = withDefaults(
+  defineProps<Props>(***REMOVED***,
+***REMOVED***
+    text: '',
+    autoColor: true,
+    noCopy: false,
+  ***REMOVED***,
+***REMOVED***
+
 const { copy, copied, copyDuration ***REMOVED*** = useClipText(***REMOVED***
 
 interface Props {
@@ -6,27 +15,20 @@ interface Props {
   autoColor?: boolean
   noCopy?: boolean
 ***REMOVED***
-const props = withDefaults(
-  defineProps<Props>(***REMOVED***,
-***REMOVED***
-    text: '',
-    autoColor: true,
-    noCopy: false
-  ***REMOVED***
-***REMOVED***
-
 const copyText = async (***REMOVED*** => {
-  if (copied.value***REMOVED*** return
+  if (copied.value***REMOVED*** {
+    return
+  ***REMOVED***
 
   await copy(props.text***REMOVED***
   window.$ModalMessage.destroyAll(***REMOVED***
   window.$ModalMessage.success('已复制', {
-    duration: copyDuration
+    duration: copyDuration,
   ***REMOVED******REMOVED***
 ***REMOVED***
 
 defineExpose({
-  copyText
+  copyText,
 ***REMOVED******REMOVED***
 ***REMOVED***
 
@@ -38,7 +40,7 @@ defineExpose({
       name="default"
       v-bind="{
         copyText,
-        copied
+        copied,
       ***REMOVED***"
     ></slot>
   ***REMOVED***
@@ -48,10 +50,10 @@ defineExpose({
     :class="[
       copied
         ? `cursor-initial i-ic:baseline-check ${autoColor && 'c-primary'***REMOVED***`
-        : 'cursor-pointer i-ci:copy'
+        : 'cursor-pointer i-ci:copy',
 ***REMOVED***"
     v-bind="{
-      onClick: !noCopy ? copyText : (***REMOVED*** => {***REMOVED***
+      onClick: !noCopy ? copyText : (***REMOVED*** => {***REMOVED***,
     ***REMOVED***"
   ></div>
 ***REMOVED***

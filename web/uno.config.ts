@@ -1,26 +1,26 @@
+import presetRemToPx from '@unocss/preset-rem-to-px'
+
 import {
   defineConfig,
   presetAttributify,
   presetIcons,
-  presetUno,
+  presetWind3,
   toEscapedSelector,
-  transformerDirectives
+  transformerDirectives,
 ***REMOVED*** from 'unocss'
-
-import presetRemToPx from '@unocss/preset-rem-to-px'
 
 
 export default defineConfig({
   presets: [
-    presetUno(***REMOVED***,
+    presetWind3(***REMOVED***,
     presetAttributify(***REMOVED***,
     presetIcons(***REMOVED***,
     presetRemToPx({
-      baseFontSize: 4
-    ***REMOVED******REMOVED***
+      baseFontSize: 4,
+    ***REMOVED******REMOVED***,
   ],
   transformers: [
-    transformerDirectives(***REMOVED***
+    transformerDirectives(***REMOVED***,
   ],
   theme: {
     colors: {
@@ -29,14 +29,14 @@ export default defineConfig({
       warning: '#fe7d18',
       danger: '#fa5555',
       info: '#909399',
-      bgcolor: '#f2ecee'
-    ***REMOVED***
+      bgcolor: '#f2ecee',
+    ***REMOVED***,
   ***REMOVED***,
   rules: [
     [
       'navbar-shadow', {
-        'box-shadow': '0 1px 4px rgb(0 21 41 / 8%***REMOVED***'
-      ***REMOVED***
+        'box-shadow': '0 1px 4px rgb(0 21 41 / 8%***REMOVED***',
+      ***REMOVED***,
 ***REMOVED***,
     [
       /^wrapper-dialog-(.+***REMOVED***$/,
@@ -44,22 +44,22 @@ export default defineConfig({
         const themeColor = (theme as any***REMOVED***.colors
         const selector = toEscapedSelector(rawSelector***REMOVED***
         return `
-          ${ selector ***REMOVED*** {
+          ${selector***REMOVED*** {
           ***REMOVED***
           ***REMOVED***
           ***REMOVED***
             overflow: hidden;
           ***REMOVED***
-          ${ selector ***REMOVED*** .n-dialog__title {
+          ${selector***REMOVED*** .n-dialog__title {
             padding: var(--n-padding***REMOVED***;
           ***REMOVED***
-          ${ selector ***REMOVED*** .n-dialog__content {
+          ${selector***REMOVED*** .n-dialog__content {
           ***REMOVED***
           ***REMOVED***
             min-height: 0;
           ***REMOVED***
 ***REMOVED***
-      ***REMOVED***
-***REMOVED***
-  ]
+      ***REMOVED***,
+***REMOVED***,
+  ],
 ***REMOVED******REMOVED***

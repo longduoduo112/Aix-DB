@@ -1,16 +1,14 @@
 <script lang="ts" setup>
-
 withDefaults(
   defineProps<{
     showBorder?: boolean
   ***REMOVED***>(***REMOVED***,
 ***REMOVED***
-    showBorder: false
-  ***REMOVED***
+    showBorder: false,
+  ***REMOVED***,
 ***REMOVED***
 
 const link = ref('https://github.com/pdsuwwz'***REMOVED***
-
 ***REMOVED***
 
 ***REMOVED***

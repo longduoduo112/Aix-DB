@@ -1,23 +1,23 @@
 module.exports = {
-  'extends': [
+  extends: [
     'stylelint-config-standard',
     'stylelint-config-standard-scss',
     'stylelint-config-recommended-vue',
-    'stylelint-config-recommended-vue/scss'
+    'stylelint-config-recommended-vue/scss',
   ],
-  'plugins': ['@stylistic/stylelint-plugin'],
-  'ignoreFiles': ['**/*.js', '**/*.ts'],
-  'defaultSeverity': 'error',
-  'rules': {
+  plugins: ['@stylistic/stylelint-plugin'],
+  ignoreFiles: ['**/*.js', '**/*.ts'],
+  defaultSeverity: 'error',
+  rules: {
     'unit-disallowed-list': [
       'rem',
-      'pt'
+      'pt',
 ***REMOVED***,
     '@stylistic/indentation': [
       2,
     ***REMOVED***
-        'baseIndentLevel': 0
-      ***REMOVED***
+        baseIndentLevel: 0,
+      ***REMOVED***,
 ***REMOVED***,
     'no-empty-source': null,
     'block-no-empty': null,
@@ -33,33 +33,33 @@ module.exports = {
     'selector-pseudo-class-no-unknown': [
       true,
     ***REMOVED***
-        'ignorePseudoClasses': [
+        ignorePseudoClasses: [
           'export',
-          'deep'
-    ***REMOVED***
-      ***REMOVED***
+          'deep',
+    ***REMOVED***,
+      ***REMOVED***,
 ***REMOVED***,
     'color-function-notation': ['modern', {
-      'ignore': ['with-var-inside']
+      ignore: ['with-var-inside'],
     ***REMOVED***],
     'property-no-unknown': null,
     'at-rule-empty-line-before': [
       'always',
     ***REMOVED***
-        'except': ['first-nested', 'blockless-after-same-name-blockless']
-      ***REMOVED***
+        except: ['first-nested', 'blockless-after-same-name-blockless'],
+      ***REMOVED***,
 ***REMOVED***,
     'custom-property-empty-line-before': [
       'always',
     ***REMOVED***
-        'except': ['after-custom-property', 'first-nested']
-      ***REMOVED***
+        except: ['after-custom-property', 'first-nested'],
+      ***REMOVED***,
 ***REMOVED***,
     'declaration-empty-line-before': [
       'always',
     ***REMOVED***
-        'except': ['after-declaration', 'first-nested']
-      ***REMOVED***
+        except: ['after-declaration', 'first-nested'],
+      ***REMOVED***,
 ***REMOVED***,
     'rule-empty-line-before': ['always-multi-line'],
 
@@ -67,8 +67,8 @@ module.exports = {
     'property-no-vendor-prefix': [
       true,
     ***REMOVED***
-        ignoreProperties: ['box-shadow']
-      ***REMOVED***
-***REMOVED***
-  ***REMOVED***
+        ignoreProperties: ['box-shadow'],
+      ***REMOVED***,
+***REMOVED***,
+  ***REMOVED***,
 ***REMOVED***

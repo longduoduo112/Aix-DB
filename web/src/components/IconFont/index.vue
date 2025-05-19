@@ -1,31 +1,30 @@
 <script lang="ts">
-
 export default defineComponent({
   name: 'IconFont',
   props: {
     icon: {
       type: String,
-      default: ''
+      default: '',
     ***REMOVED***,
     shadow: {
       type: Boolean,
-      default: false
+      default: false,
     ***REMOVED***,
     verticalCenter: {
       type: Boolean,
-      default: false
+      default: false,
     ***REMOVED***,
     cursor: {
       type: Boolean,
-      default: false
+      default: false,
     ***REMOVED***,
     disabled: {
       type: Boolean,
-      default: false
-    ***REMOVED***
+      default: false,
+    ***REMOVED***,
   ***REMOVED***,
   emits: ['click'],
-  setup (props, { emit ***REMOVED******REMOVED*** {
+  setup(props, { emit ***REMOVED******REMOVED*** {
     const getClassName = computed((***REMOVED*** => {
       const className: string[] = []
       if (props.verticalCenter***REMOVED*** {
@@ -46,17 +45,17 @@ export default defineComponent({
 
     const getAttrs = (***REMOVED*** => {
       const attrs: any = {***REMOVED***
-      props.shadow &&
-      (attrs.filter = 'url(#drop-shadow***REMOVED***'***REMOVED***
+      props.shadow
+      && (attrs.filter = 'url(#drop-shadow***REMOVED***'***REMOVED***
       return attrs
     ***REMOVED***
 ***REMOVED***
       getClassName,
 
       handleClick,
-      getAttrs
+      getAttrs,
     ***REMOVED***
-  ***REMOVED***
+  ***REMOVED***,
 ***REMOVED******REMOVED***
 ***REMOVED***
 
@@ -94,7 +93,7 @@ export default defineComponent({
     <g
       v-bind="getAttrs(***REMOVED***"
     >
-      <use :xlink:href="'#' + icon" />
+      <use :xlink:href="`#${icon***REMOVED***`" />
     </g>
   </svg>
 ***REMOVED***

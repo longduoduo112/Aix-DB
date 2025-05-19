@@ -1,5 +1,5 @@
-import { mockEventStreamText ***REMOVED*** from '@/data'
 import * as TransformUtils from '@/components/MarkdownPreview/transform'
+import { mockEventStreamText ***REMOVED*** from '@/data'
 
 export const bytesToKB = (bytes***REMOVED*** => {
   return bytes / 1024
@@ -18,11 +18,13 @@ export const bytesToTB = (bytes***REMOVED*** => {
 ***REMOVED***
 
 export const formatBytes = (bytes***REMOVED*** => {
-  if (bytes === 0***REMOVED*** return '0 Bytes'
+  if (bytes === 0***REMOVED*** {
+    return '0 Bytes'
+  ***REMOVED***
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes***REMOVED*** / Math.log(k***REMOVED******REMOVED***
-  return `≈ ${ parseFloat((bytes / k ** i***REMOVED***.toFixed(0***REMOVED******REMOVED*** ***REMOVED*** ${ sizes[i] ***REMOVED***`
+  return `≈ ${Number.parseFloat((bytes / k ** i***REMOVED***.toFixed(0***REMOVED******REMOVED******REMOVED*** ${sizes[i]***REMOVED***`
 ***REMOVED***
 
 /**
@@ -30,10 +32,10 @@ export const formatBytes = (bytes***REMOVED*** => {
  */
 export const convertTextToFile = (textContent, fileName***REMOVED*** => {
   const blob = new Blob([textContent], {
-    type: 'text/plain'
+    type: 'text/plain',
   ***REMOVED******REMOVED***
   const file = new File([blob], fileName, {
-    type: 'text/plain'
+    type: 'text/plain',
   ***REMOVED******REMOVED***
   return file
 ***REMOVED***
@@ -46,10 +48,10 @@ export const convertTextToFile = (textContent, fileName***REMOVED*** => {
  */
 export const sanitizeAndAppendTxtExtension = (text***REMOVED*** => {
   // 替换非法文件名字符为 '-'，包括 '.', 逗号和其他非法字符
-  const sanitizedText = text.replace(/[\/\\:*?"<>|.,;]/g, '-'***REMOVED***
+  const sanitizedText = text.replace(/[/\\:*?"<>|.,;]/g, '-'***REMOVED***
 
   // 使用正则表达式检查并替换最后的后缀
-  return `${ sanitizedText.replace(/\.[^/.]+$/, ''***REMOVED*** ***REMOVED***.txt`
+  return `${sanitizedText.replace(/\.[^/.]+$/, ''***REMOVED******REMOVED***.txt`
 ***REMOVED***
 
 
@@ -71,7 +73,7 @@ export const createMockReader = (delay = 5***REMOVED***: ReadableStreamDefaultRe
       ***REMOVED*** else {
         controller.close(***REMOVED***
       ***REMOVED***
-    ***REMOVED***
+    ***REMOVED***,
   ***REMOVED******REMOVED***
 
   return stream.pipeThrough(new TextDecoderStream(***REMOVED******REMOVED***

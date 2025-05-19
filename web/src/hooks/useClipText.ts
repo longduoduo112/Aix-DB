@@ -1,4 +1,4 @@
-export function useClipText (***REMOVED*** {
+export function useClipText(***REMOVED*** {
   const copied = ref(false***REMOVED***
   const copyDuration = 1500
 
@@ -9,7 +9,7 @@ export function useClipText (***REMOVED*** {
     ***REMOVED***, copyDuration***REMOVED***
   ***REMOVED***
 
-  function copy (textToCopy***REMOVED*** {
+  function copy(textToCopy***REMOVED*** {
     if (navigator.clipboard && window.isSecureContext***REMOVED*** {
       return navigator.clipboard.writeText(textToCopy***REMOVED***.then((***REMOVED*** => {
         handleCopied(***REMOVED***
@@ -31,7 +31,7 @@ export function useClipText (***REMOVED*** {
             handleCopied(***REMOVED***
             resolve(''***REMOVED***
           ***REMOVED*** else {
-            reject(new Error***REMOVED***
+            reject(new Error(***REMOVED******REMOVED***
           ***REMOVED***
           textArea.remove(***REMOVED***
         ***REMOVED******REMOVED***
@@ -42,6 +42,6 @@ export function useClipText (***REMOVED*** {
   return {
     copy,
     copied,
-    copyDuration
+    copyDuration,
   ***REMOVED***
 ***REMOVED***
