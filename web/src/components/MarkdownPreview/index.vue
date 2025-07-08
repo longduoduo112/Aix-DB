@@ -787,7 +787,7 @@ const onChartCompletedReader = function (***REMOVED*** {
     // // height: auto; // 高度自适应
 
 ***REMOVED***// 设置宽度为视口宽度
-    height: 500px; // 设置高度为视口高度
+***REMOVED***// 设置高度为视口高度
 ***REMOVED***// 保持图片比例，覆盖整个容器，可能会裁剪部分图片
 ***REMOVED***
 ***REMOVED***// 移除外边距
