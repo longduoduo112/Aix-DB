@@ -44,7 +44,7 @@ class LangGraphReactAgent:
 
         # 使用 os.path 构建路径
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        mcp_tool_path = os.path.join(current_dir, "query_db_tool.py")
+        mcp_tool_path = os.path.join(current_dir, "mcp", "query_db_tool.py")
         self.client = MultiServerMCPClient(
             {
                 "mcp-hub": {
@@ -56,17 +56,17 @@ class LangGraphReactAgent:
                     "args": [mcp_tool_path],
                     "transport": "stdio",
                 },
-                "undoom-douyin-data-analysis": {
-                    "command": "uvx",
-                    "transport": "stdio",
-                    "args": [
-                        "--index-url",
-                        "https://mirrors.aliyun.com/pypi/simple/",
-                        "--from",
-                        "undoom-douyin-data-analysis",
-                        "undoom-douyin-mcp",
-                    ],
-                },
+                # "undoom-douyin-data-analysis": {
+                #     "command": "uvx",
+                #     "transport": "stdio",
+                #     "args": [
+                #         "--index-url",
+                #         "https://mirrors.aliyun.com/pypi/simple/",
+                #         "--from",
+                #         "undoom-douyin-data-analysis",
+                #         "undoom-douyin-mcp",
+                #     ],
+                # },
             }
         )
 
