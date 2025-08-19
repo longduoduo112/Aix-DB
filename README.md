@@ -99,7 +99,7 @@ https://github.com/user-attachments/assets/923758a3-4879-4836-852b-691413da372e
    - 导入项目根目录下的**docker/docker/dify/数据问答_v1.1.5_qwen_plus.yml画布** 
    - 获取画布对应的api-key先复制出来下面步骤会使用
    - 导入画布后需要手动选择一下配置的大模型并保存
-   - **修改画布里面的http节点本地部署默认不用修改;服务器上启动修改为实际IP地址**
+   - ***修改画布里面的http节点本地部署默认不用修改;服务器上启动修改为实际IP地址***
 
 ![image](./docker/images/llm-setting.png)
 ![image](./docker/images/import-convas.png)
@@ -140,13 +140,13 @@ docker compose up -d mcphub
 
 2. **启动服务**
    - 修改docker-compose里的环境变量(配置文件在docker/docker-compose.yml)
-      - 修改**MYSQL_HOST**本地启动默认不用修改;其它情况修改为实际IP地址
-      - 修改**DIFY_SERVER_URL** Dify服务地址,***本地启动默认不用修改;服务器上启动修改为实际IP地址***
-      - 修改**DIFY_DATABASE_QA_API_KEY** Dify智能体api-key,***本地启动默认不用修改;服务器上启动修改为实际IP地址***
-      - 修改**MODEL_BASE_URL** 公网大模型服务地址如使用阿里云公网大模型服务,***默认不用修改;服务器上启动修改为实际IP地址***
-      - 修改**MODEL_NAME** 大模型名称如Qwen-Plus
+      - 修改**MYSQL_HOST** ***本地启动默认不用修改;其它情况修改为实际IP地址***
+      - 修改**DIFY_SERVER_URL** Dify服务地址 ***本地启动默认不用修改;服务器上启动修改为实际IP地址***
+      - 修改**DIFY_DATABASE_QA_API_KEY** Dify智能体api-key ***本地启动默认不用修改;服务器上启动修改为实际IP地址***
+      - 修改**MODEL_BASE_URL** 公网大模型服务地址如使用阿里云公网大模型服务 ***默认不用修改;服务器上启动修改为实际IP地址***
+      - 修改**MODEL_NAME** 大模型名称如openai:qwen-plus ***(需要加上openai:前缀)***
       - 修改**MODEL_API_KEY** 大模型服务API-KEY
-      - 修改**MCP_HUB_URL** MCP_HUB服务地址本地启动,***默认不用修改;服务器上启动修改为实际IP地址***
+      - 修改**MCP_HUB_URL** MCP_HUB服务地址 ***本地启动默认不用修改;服务器上启动修改为实际IP地址***
        ```bash
        # 拉起前后端服务和中间件
        cd docker
@@ -163,6 +163,7 @@ docker compose up -d mcphub
    docker compose up -d
 
 4. **数据初始化**
+    - 如果使用已安装的mysql,初始化数据时需修改源码initialize_mysql，修改数据库连接信息后再执行初始化
    ```bash
    
    # 安装依赖包
