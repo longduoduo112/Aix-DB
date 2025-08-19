@@ -3,9 +3,9 @@ FROM python:3.11-slim-bookworm AS builder
 WORKDIR /sanic-web
 
 # 设置清华源 + 添加 PATH
-ENV PIP_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple" \
+ENV PIP_INDEX_URL="https://mirrors.aliyun.com/pypi/simple" \
     PIP_EXTRA_INDEX_URL="https://pypi.doubanio.com/simple" \
-    UV_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple" \
+    UV_INDEX_URL="https://mirrors.aliyun.com/pypi/simple" \
     PATH="/root/.local/bin:${PATH}"
 
 # 复制项目文件
@@ -19,7 +19,7 @@ RUN set -eux; \
     pipx install "uv==0.8.0" && \
     uv venv --clear && \
     . .venv/bin/activate && \
-    uv sync --no-cache && \
+    uv sync --no-cache --index-url https://mirrors.aliyun.com/pypi/simple --extra-index-url "" --verbose && \
     apt-get purge -y gcc python3-dev && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
