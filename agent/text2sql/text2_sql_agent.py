@@ -142,10 +142,13 @@ class Text2SqlAgent:
 
             await self._send_response(response=response, content=content, data_type=data_type)
 
-            t02_answer_data.append(content)
-            if step_name == "data_render_apache":
+            if data_type == DataTypeEnum.ANSWER.value[0]:
+                t02_answer_data.append(content)
+
+            # 这里设置 Apache 表格数据
+            if step_name == "data_render_apache" and data_type == DataTypeEnum.BUS_DATA.value[0]:
                 t04_answer_data.clear()
-                t04_answer_data.update(step_value["apache_chart_data"])
+                t04_answer_data.update({"data": step_value["apache_chart_data"], "dataType": data_type})
 
             # 对于非渲染步骤，刷新响应
             if step_name not in ["data_render", "data_render_apache"]:

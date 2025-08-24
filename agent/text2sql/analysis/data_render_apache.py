@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 from agent.text2sql.state.agent_state import AgentState, ExecutionResult
 import sqlglot
@@ -70,7 +71,9 @@ def data_render_apache(state: AgentState) -> dict:
 
 
 def convert_value(v):
-    if isinstance(v, (datetime, pd.Timestamp)):
+    if isinstance(v, Decimal):
+        return float(v)  # 或者 str(v)
+    elif isinstance(v, (datetime, pd.Timestamp)):
         return v.strftime("%Y-%m-%d %H:%M:%S")
     elif isinstance(v, date):
         return v.strftime("%Y-%m-%d")
