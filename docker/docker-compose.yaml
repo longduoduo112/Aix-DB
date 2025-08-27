@@ -7,6 +7,8 @@ services:
     container_name: chat-vue3-mvp
     environment:
       - TZ=Asia/Shanghai
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/nginx.conf
     ports:
       - "8081:80"
     extra_hosts:
