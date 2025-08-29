@@ -77,6 +77,9 @@ function newChat() {
   stylizingLoading.value = false
   suggested_array.value = []
 
+  // 清除表格选中状态
+  currentIndex.value = null
+
   // 新增：生成当前问答类型的新uuid
   uuids.value[qa_type.value] = uuidv4()
 }
@@ -237,6 +240,7 @@ const uuids = ref<Record<string, string>>({}) // 改为对象存储不同问答�
 
 // 提交对话
 const handleCreateStylized = async (send_text = '') => {
+
   // 滚动到底部
   scrollToBottom()
 
@@ -498,9 +502,10 @@ const rowProps = (row: any) => {
   return {
     class: [
       'cursor-pointer select-none',
-      currentIndex.value === row.uuid && '[&_.n-data-table-td]:bg-#d5dcff',
+      currentIndex.value === row.uuid && 'selected-row',
     ].join(' '),
     onClick: async () => {
+      
       currentIndex.value = row.uuid
       suggested_array.value = []
 
@@ -723,6 +728,7 @@ const collapsed = useLocalStorage(
   'collapsed-chat-menu',
   ref(false),
 )
+
 </script>
 
 <template>
@@ -811,7 +817,6 @@ const collapsed = useLocalStorage(
               class="custom-table"
               :style="{
                 'font-size': `16px`,
-                '--n-td-color-hover': `#d5dcff`,
                  '--n-td-color': `#fff`, 
                 'font-family': `-apple-system, BlinkMacSystemFont,'Segoe UI', Roboto, 'Helvetica Neue', Arial,sans-serif`,
               }"
@@ -1055,8 +1060,8 @@ const collapsed = useLocalStorage(
                   >
                     <template #icon>
                       <n-icon size="19">
-<svg t="1754035667476" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="50983" width="60" height="60"><path d="M512 102.6c110.7 0 215 12.3 293.9 34.7 35.8 10.2 65 22.1 84.5 34.7 18.6 12 21.3 19.7 21.6 20.6-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.7-293.9 34.7s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6 0.2-0.9 3-8.6 21.6-20.6 19.5-12.5 48.7-24.5 84.5-34.7 78.9-22.4 183.2-34.7 293.9-34.7m0-40c-243 0-440 58.2-440 130s197 130 440 130 440-58.2 440-130-197-130-440-130zM112 190.4H72v641h40v-641z m840-0.3h-40v641h40v-641zM912 831v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.6-293.9 34.6s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.1z m0-210.5v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7C727 698.6 622.7 711 512 711s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.2z m0-221.5v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.7-293.9 34.7s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.2z" fill="" p-id="50984"></path></svg>
-</n-icon>
+                    <svg t="1754035667476" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="50983" width="60" height="60"><path d="M512 102.6c110.7 0 215 12.3 293.9 34.7 35.8 10.2 65 22.1 84.5 34.7 18.6 12 21.3 19.7 21.6 20.6-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.7-293.9 34.7s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6 0.2-0.9 3-8.6 21.6-20.6 19.5-12.5 48.7-24.5 84.5-34.7 78.9-22.4 183.2-34.7 293.9-34.7m0-40c-243 0-440 58.2-440 130s197 130 440 130 440-58.2 440-130-197-130-440-130zM112 190.4H72v641h40v-641z m840-0.3h-40v641h40v-641zM912 831v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.6-293.9 34.6s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.1z m0-210.5v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7C727 698.6 622.7 711 512 711s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.2z m0-221.5v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.7-293.9 34.7s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.2z" fill="" p-id="50984"></path></svg>
+                    </n-icon>
                 </template>
                     数据问答
                   </n-button>
@@ -1331,10 +1336,30 @@ const collapsed = useLocalStorage(
   display: none;
 }
 
+:deep(.custom-table .n-data-table-table) {
+  border-collapse: collapse;
+}
+
+:deep(.custom-table .n-data-table-th),
+:deep(.custom-table .n-data-table-td) {
+  border: none;
+}
+
 :deep(.custom-table td) {
   color: #2C2C36;
   font-size: 14px;
-  padding: 10px 24px;
+  padding: 12px 25px;
+  background-color:  #fff;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:deep(.custom-table .selected-row td) {
+  color: #615ced !important;
+  font-weight: bold;
+  padding: 12px 30px !important;
+   background: linear-gradient(to bottom, #ffffff, #f9f9ff); 
+  transform: scale(1.001);
+  transition: all 0.3s ease;
 }
 
 .default-page {
@@ -1385,7 +1410,7 @@ const collapsed = useLocalStorage(
 
 .header,
 .footer {
-  background-color: #fff;
+   background-color: #fff;
 }
 
 .content {
@@ -1426,6 +1451,8 @@ const collapsed = useLocalStorage(
 .scrollable-table-container {
   overflow-y: hidden; /* 默认隐藏滚动条 */
   height: 100%; /* 根据实际情况调整高度 */
+  background-color: #fff;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .scrollable-table-container:hover {
@@ -1446,5 +1473,6 @@ const collapsed = useLocalStorage(
   background-color: #bfbfbf; /* 滚动条颜色 */
   border-radius: 3px; /* 滚动条圆角 */
 }
+
 
 </style>
