@@ -69,7 +69,7 @@ async def upload_file(request: Request):
 @async_json_resp
 async def upload_file_and_parse(request: Request):
     """
-    上传附件
+    上传附件并解析内容
     :param request:
     :return:
     """

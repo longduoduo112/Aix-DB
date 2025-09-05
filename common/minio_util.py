@@ -147,6 +147,8 @@ class MinioUtils:
             if len(file_data.body) > 50 * 1024 * 1024:
                 raise MyException(SysCode.c_9999, "文件大小超出限制")
 
+            source_file_key = self.upload_file_from_request(request, bucket_name)
+
             # 校验 MIME 类型是否支持（增强安全性）
             allowed_mimes = {
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
@@ -193,9 +195,10 @@ class MinioUtils:
                 raise ValueError("不支持的文件格式")
 
             # 创建一个txt文件并上传
-            return self.upload_to_minio_form_stream(
+            parse_file_key = self.upload_to_minio_form_stream(
                 io.BytesIO(full_text.encode("utf-8")), bucket_name, object_name + file_suffix
             )
+            return {"source_file_key": source_file_key["object_key"], "parse_file_key": parse_file_key}
 
         except Exception as err:
             logger.error(f"Error uploading file and parsing from request: {err}")
