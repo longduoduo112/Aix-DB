@@ -6,16 +6,14 @@ import traceback
 from datetime import timedelta
 from uuid import uuid4
 
+import pymupdf
+import pymupdf4llm
 from docx import Document
 from minio import Minio, S3Error
 from sanic import Request
 
 from common.exception import MyException
 from constants.code_enum import SysCodeEnum as SysCode
-import pymupdf
-
-from docx import Document
-import pymupdf4llm
 
 logger = logging.getLogger(__name__)
 
