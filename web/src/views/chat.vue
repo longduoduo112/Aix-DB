@@ -1,6 +1,7 @@
 <script lang="tsx" setup>
-import { backTopDark, type InputInst } from 'naive-ui'
+import type { InputInst } from 'naive-ui'
 import { init } from 'echarts'
+import { backTopDark } from 'naive-ui'
 import { UAParser } from 'ua-parser-js'
 import * as GlobalAPI from '@/api'
 import { isMockDevelopment } from '@/config'
@@ -67,7 +68,6 @@ function handleModalClose(value) {
 
 // 新建对话
 function newChat() {
-
   backgroundColorVariable.value = '#ffffff'
 
   if (showDefaultPage.value) {
@@ -161,7 +161,7 @@ const onChartReady = (index) => {
 const onRecycleQa = async (index: number) => {
   // 设置当前选中的问答类型
   const item = conversationItems.value[index]
-  onAqtiveChange(item.qa_type,item.chat_id)
+  onAqtiveChange(item.qa_type, item.chat_id)
 
   if (item.qa_type === 'FILEDATA_QA') {
     businessStore.update_file_url(item.file_key)
@@ -236,14 +236,13 @@ const contentLoadingStates = ref(
   visibleConversationItems.value.map(() => false),
 )
 
-// 
+//
 
 
 const uuids = ref<Record<string, string>>({}) // 改为对象存储不同问答类型的uuid
 
 // 提交对话
 const handleCreateStylized = async (send_text = '') => {
-
   backgroundColorVariable.value = '#f6f7fb'
 
   // 滚动到底部
@@ -263,7 +262,7 @@ const handleCreateStylized = async (send_text = '') => {
     // 停止dify 对话
     await GlobalAPI.stop_chat(businessStore.$state.task_id, qa_type.value)
     onCompletedReader(conversationItems.value.length - 1)
-    //隐藏加载提示动画
+    // 隐藏加载提示动画
     contentLoadingStates.value = contentLoadingStates.value.map(() => false)
     return
   }
@@ -303,9 +302,9 @@ const handleCreateStylized = async (send_text = '') => {
   }
 
   // 如果有相同的chat_id 则不添加 使用 unshift 方法将新元素添加到数组的最前面
-  const hasSameChatId = tableData.value.some(item => item.chat_id === uuids.value[qa_type.value])
+  const hasSameChatId = tableData.value.some((item) => item.chat_id === uuids.value[qa_type.value])
   if (!hasSameChatId) {
-     tableData.value.unshift(newItem)
+    tableData.value.unshift(newItem)
   }
 
   // 调用大模型后台服务接口
@@ -482,7 +481,7 @@ const finish_upload = (res) => {
     const json_data = JSON.parse(res.event.target.responseText)
     const file_url = json_data.data.object_key
     if (json_data.code === 200) {
-      onAqtiveChange('FILEDATA_QA','')
+      onAqtiveChange('FILEDATA_QA', '')
       businessStore.update_file_url(file_url)
       window.$ModalMessage.success(`文件上传成功`)
     } else {
@@ -510,9 +509,8 @@ const rowProps = (row: any) => {
       currentIndex.value === row.uuid && 'selected-row',
     ].join(' '),
     onClick: async () => {
-
       backgroundColorVariable.value = '#f6f7fb'
-      
+
       currentIndex.value = row.uuid
       suggested_array.value = []
 
@@ -537,7 +535,7 @@ const rowProps = (row: any) => {
       //  滚动到指定位置
       scrollToItem(row.uuid)
 
-      onAqtiveChange(row.qa_type,row.chat_id)
+      onAqtiveChange(row.qa_type, row.chat_id)
     },
   }
 }
@@ -586,7 +584,7 @@ const scrollToItem = async (uuid: string) => {
 
 // 默认选中的对话类型
 const qa_type = ref('COMMON_QA')
-const onAqtiveChange = (val,chat_id) => {
+const onAqtiveChange = (val, chat_id) => {
   qa_type.value = val
   businessStore.update_qa_type(val)
 
@@ -595,7 +593,7 @@ const onAqtiveChange = (val,chat_id) => {
   if (chat_id) {
     uuids.value[val] = chat_id
   } else {
-      uuids.value[val] = uuidv4()
+    uuids.value[val] = uuidv4()
   }
 
   // 清空文件上传历史url
@@ -622,7 +620,7 @@ const query_dify_suggested = async () => {
 const onSuggested = (index: number) => {
   // 如果是报告问答的建议问题点击后切换到通用对话
   if (qa_type.value === 'REPORT_QA') {
-    onAqtiveChange('COMMON_QA','')
+    onAqtiveChange('COMMON_QA', '')
   }
   handleCreateStylized(suggested_array.value[index])
 }
@@ -737,8 +735,7 @@ const collapsed = useLocalStorage(
 )
 
 // 背景颜色 默认页面和内容页面动态调整
-const backgroundColorVariable = ref('#ffffff') 
-
+const backgroundColorVariable = ref('#ffffff')
 </script>
 
 <template>
@@ -828,7 +825,7 @@ const backgroundColorVariable = ref('#ffffff')
               class="custom-table"
               :style="{
                 'font-size': `16px`,
-                 '--n-td-color': `#ffffff`, 
+                '--n-td-color': `#ffffff`,
                 'font-family': `-apple-system, BlinkMacSystemFont,'Segoe UI', Roboto, 'Helvetica Neue', Arial,sans-serif`,
               }"
               size="small"
@@ -851,7 +848,11 @@ const backgroundColorVariable = ref('#ffffff')
             class="footer"
             style="flex-shrink: 0; height: 200"
           >
-            <n-divider  style="width: calc(100% - 50px); margin-left: 25px; margin-right: 25px; --n-color: #e8eaf2;" />
+            <n-divider
+              style="width: calc(100% - 50px); margin-left: 25px; margin-right: 25px;
+
+--n-color: #e8eaf2;"
+            />
             <n-button
               quaternary
               icon-placement="left"
@@ -922,69 +923,68 @@ const backgroundColorVariable = ref('#ffffff')
                 :ref="(el) => setMarkdownPreview(item.uuid, item.role, el)"
                 class="mb-4"
               >
-           
-              <div v-if="item.role === 'user'" class="flex flex-col items-end space-y-2 w-full">
-                <!-- 用户消息 -->
-                <div
+                <div v-if="item.role === 'user'" class="flex flex-col items-end space-y-2 w-full">
+                  <!-- 用户消息 -->
+                  <div
                     :style="{
-                        'margin-left': `10%`,
-                        'margin-right': `10%`,
-                        'padding': `15px`,
-                        'border-radius': `5px`,
-                        'text-align': `center`,
-                        'max-width': '80%', // 控制宽度避免撑满
+                      'margin-left': `10%`,
+                      'margin-right': `10%`,
+                      'padding': `15px`,
+                      'border-radius': `5px`,
+                      'text-align': `center`,
+                      'max-width': '80%', // 控制宽度避免撑满
                     }"
-                >
+                  >
                     <n-space>
-                        <n-tag
-                            size="large"
-                            :bordered="false"
-                            :round="true"
-                            :style="{
-                                'fontSize': '16px',
-                                'fontFamily': `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'`,
-                                'fontWeight': '400',
-                                'color': '#26244c',
-                                'max-width': '600px',
-                                'text-align': 'left',
-                                'padding': '5px 18px',
-                                'height': 'auto',
-                                'line-height': 1.5,
-                                'word-wrap': 'break-word',
-                                'word-break': 'break-all',
-                                'white-space': 'pre-wrap',
-                                'overflow': 'visible',
-                            }"
-                            :color="{
-                                color: '#e0dfff',
-                                borderColor: '#e0dfff',
-                            }"
-                        >
-                            <template #avatar>
-                                <div class="size-25 i-my-svg:user-avatar"></div>
-                            </template>
-                            {{ item.question }}
-                        </n-tag>
+                      <n-tag
+                        size="large"
+                        :bordered="false"
+                        :round="true"
+                        :style="{
+                          'fontSize': '16px',
+                          'fontFamily': `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'`,
+                          'fontWeight': '400',
+                          'color': '#26244c',
+                          'max-width': '600px',
+                          'text-align': 'left',
+                          'padding': '5px 18px',
+                          'height': 'auto',
+                          'line-height': 1.5,
+                          'word-wrap': 'break-word',
+                          'word-break': 'break-all',
+                          'white-space': 'pre-wrap',
+                          'overflow': 'visible',
+                        }"
+                        :color="{
+                          color: '#e0dfff',
+                          borderColor: '#e0dfff',
+                        }"
+                      >
+                        <template #avatar>
+                          <div class="size-25 i-my-svg:user-avatar"></div>
+                        </template>
+                        {{ item.question }}
+                      </n-tag>
                     </n-space>
-                </div>
+                  </div>
 
-                <!-- 加载动画：紧跟在消息下方，但对齐到左边 -->
-                <div
+                  <!-- 加载动画：紧跟在消息下方，但对齐到左边 -->
+                  <div
                     v-if="contentLoadingStates[index]"
                     class="i-svg-spinners:bars-scale"
                     :style="{
-                        'width': `24px`,
-                        'height': `24px`,
-                        'color': `#b1adf3`,
-                        'border-left-color': `#b1adf3`,
-                        'animation': `spin 1s linear infinite`,
-                        'margin-top': '10px',
-                        'align-self': 'flex-start', // 让此元素在交叉轴（水平轴）上靠左对齐
-                        'margin-left': '12%', // 与上面的消息保持一致的缩进
+                      'width': `24px`,
+                      'height': `24px`,
+                      'color': `#b1adf3`,
+                      'border-left-color': `#b1adf3`,
+                      'animation': `spin 1s linear infinite`,
+                      'margin-top': '10px',
+                      'align-self': 'flex-start', // 让此元素在交叉轴（水平轴）上靠左对齐
+                      'margin-left': '12%', // 与上面的消息保持一致的缩进
                     }"
-                ></div>
-            </div>
-            
+                  ></div>
+                </div>
+
                 <div v-if="item.role === 'assistant'">
                   <MarkdownPreview
                     :reader="item.reader"
@@ -1019,7 +1019,7 @@ const backgroundColorVariable = ref('#ffffff')
             </div>
           </div>
 
-         <div
+          <div
             :class="['items-center', 'shrink-0', `bg-${backgroundColorVariable}`]"
           >
             <div
@@ -1037,7 +1037,7 @@ const backgroundColorVariable = ref('#ffffff')
                       qa_type === 'COMMON_QA' && 'active-tab',
                       'rounded-100 w-120 h-36 p-15 text-13 c-#585a73',
                     ]"
-                    @click="onAqtiveChange('COMMON_QA','')"
+                    @click="onAqtiveChange('COMMON_QA', '')"
                   >
                     <template #icon>
                       <n-icon size="16">
@@ -1067,13 +1067,13 @@ const backgroundColorVariable = ref('#ffffff')
                       qa_type === 'DATABASE_QA' && 'active-tab',
                       'rounded-100 w-120 h-36 p-15 text-13 c-#585a73',
                     ]"
-                    @click="onAqtiveChange('DATABASE_QA','')"
+                    @click="onAqtiveChange('DATABASE_QA', '')"
                   >
                     <template #icon>
                       <n-icon size="19">
-                    <svg t="1754035667476" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="50983" width="60" height="60"><path d="M512 102.6c110.7 0 215 12.3 293.9 34.7 35.8 10.2 65 22.1 84.5 34.7 18.6 12 21.3 19.7 21.6 20.6-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.7-293.9 34.7s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6 0.2-0.9 3-8.6 21.6-20.6 19.5-12.5 48.7-24.5 84.5-34.7 78.9-22.4 183.2-34.7 293.9-34.7m0-40c-243 0-440 58.2-440 130s197 130 440 130 440-58.2 440-130-197-130-440-130zM112 190.4H72v641h40v-641z m840-0.3h-40v641h40v-641zM912 831v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.6-293.9 34.6s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.1z m0-210.5v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7C727 698.6 622.7 711 512 711s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.2z m0-221.5v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.7-293.9 34.7s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.2z" fill="" p-id="50984"></path></svg>
-                    </n-icon>
-                </template>
+                        <svg t="1754035667476" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="50983" width="60" height="60"><path d="M512 102.6c110.7 0 215 12.3 293.9 34.7 35.8 10.2 65 22.1 84.5 34.7 18.6 12 21.3 19.7 21.6 20.6-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.7-293.9 34.7s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6 0.2-0.9 3-8.6 21.6-20.6 19.5-12.5 48.7-24.5 84.5-34.7 78.9-22.4 183.2-34.7 293.9-34.7m0-40c-243 0-440 58.2-440 130s197 130 440 130 440-58.2 440-130-197-130-440-130zM112 190.4H72v641h40v-641z m840-0.3h-40v641h40v-641zM912 831v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.6-293.9 34.6s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.1z m0-210.5v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7C727 698.6 622.7 711 512 711s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.2z m0-221.5v0.5c-0.2 0.9-3 8.6-21.6 20.6-19.5 12.5-48.7 24.5-84.5 34.7-78.9 22.3-183.2 34.7-293.9 34.7s-215-12.3-293.9-34.7c-35.8-10.2-65-22.1-84.5-34.7-18.6-12-21.3-19.7-21.6-20.6v-0.3l-40 0.3v0.1c0 71.8 197 130 440 130s440-58.2 440-130v-0.4l-40-0.2z" fill="" p-id="50984" /></svg>
+                      </n-icon>
+                    </template>
                     数据问答
                   </n-button>
                   <n-button
@@ -1082,7 +1082,7 @@ const backgroundColorVariable = ref('#ffffff')
                       qa_type === 'FILEDATA_QA' && 'active-tab',
                       'rounded-100 w-120 h-36 p-15 text-13 c-#585a73',
                     ]"
-                    @click="onAqtiveChange('FILEDATA_QA','')"
+                    @click="onAqtiveChange('FILEDATA_QA', '')"
                   >
                     <template #icon>
                       <n-icon size="20">
@@ -1117,7 +1117,7 @@ const backgroundColorVariable = ref('#ffffff')
                       qa_type === 'REPORT_QA' && 'active-tab',
                       'rounded-100 w-120 h-36 p-15 text-13 c-#585a73',
                     ]"
-                    @click="onAqtiveChange('REPORT_QA','')"
+                    @click="onAqtiveChange('REPORT_QA', '')"
                   >
                     <template #icon>
                       <n-icon size="18">
@@ -1179,7 +1179,7 @@ const backgroundColorVariable = ref('#ffffff')
                   class="textarea-resize-none text-15"
                   :style="{
                     '--n-border-radius': '15px',
-                    '--n-padding-left': '60px',
+                    '--n-padding-left': '15px',
                     '--n-padding-right': '20px',
                     '--n-padding-vertical': '18px',
                     'width': '80%',
@@ -1187,81 +1187,84 @@ const backgroundColorVariable = ref('#ffffff')
                     'align': 'center',
                     'font-family': `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'`,
                     'font-size': '16px',
-                    'line-height': '1.5'
+                    'line-height': '1.5',
                   }"
                   :placeholder="placeholder"
                   :autosize="{
                     minRows: 1,
                     maxRows: 10,
                   }"
-                />
-                <div
-                  absolute
-                  class="translate-y--50% ml-11% top-62%"
                 >
-                  <n-dropdown
-                    :options="options"
-                    @select="handleSelect"
+                  <template
+                    #prefix
                   >
-                    <n-icon size="30">
-                      <svg
-                        t="1729566080604"
-                        class="icon"
-                        viewBox="0 0 1024 1024"
-                        version="1.1"
-                        xmlns="http://www.w3.org/2000/svg"
-                        p-id="38910"
-                        width="64"
-                        height="64"
-                      >
-                        <path
-                          d="M856.448 606.72v191.744a31.552 31.552 0 0 1-31.488 31.488H194.624a31.552 31.552 0 0 1-31.488-31.488V606.72a31.488 31.488 0 1 1 62.976 0v160.256h567.36V606.72a31.488 31.488 0 1 1 62.976 0zM359.872 381.248c-8.192 0-10.56-5.184-5.376-11.392L500.48 193.152a11.776 11.776 0 0 1 18.752 0l145.856 176.704c5.184 6.272 2.752 11.392-5.376 11.392H359.872z"
-                          fill="#838384"
-                          p-id="38911"
-                        />
-                        <path
-                          d="M540.288 637.248a30.464 30.464 0 1 1-61.056 0V342.656a30.464 30.464 0 1 1 61.056 0v294.592z"
-                          fill="#838384"
-                          p-id="38912"
-                        />
-                      </svg>
-                    </n-icon>
-                  </n-dropdown>
-                  <!-- 隐藏的文件上传按钮 -->
-                  <n-upload
-                    ref="uploadRef"
-                    type="button"
-                    :show-file-list="false"
-                    action="sanic/file/upload_file"
-                    accept=".xlsx,.xls,.csv"
-                    style="display: none"
-                    @finish="finish_upload"
+                    <n-dropdown
+                      :options="options"
+                      @select="handleSelect"
+                    >
+                      <n-icon size="30">
+                        <svg
+                          t="1729566080604"
+                          class="icon"
+                          viewBox="0 0 1024 1024"
+                          version="1.1"
+                          xmlns="http://www.w3.org/2000/svg"
+                          p-id="38910"
+                          width="64"
+                          height="64"
+                        >
+                          <path
+                            d="M856.448 606.72v191.744a31.552 31.552 0 0 1-31.488 31.488H194.624a31.552 31.552 0 0 1-31.488-31.488V606.72a31.488 31.488 0 1 1 62.976 0v160.256h567.36V606.72a31.488 31.488 0 1 1 62.976 0zM359.872 381.248c-8.192 0-10.56-5.184-5.376-11.392L500.48 193.152a11.776 11.776 0 0 1 18.752 0l145.856 176.704c5.184 6.272 2.752 11.392-5.376 11.392H359.872z"
+                            fill="#838384"
+                            p-id="38911"
+                          />
+                          <path
+                            d="M540.288 637.248a30.464 30.464 0 1 1-61.056 0V342.656a30.464 30.464 0 1 1 61.056 0v294.592z"
+                            fill="#838384"
+                            p-id="38912"
+                          />
+                        </svg>
+                      </n-icon>
+                    </n-dropdown>
+                    <!-- 隐藏的文件上传按钮 -->
+                    <n-upload
+                      ref="uploadRef"
+                      type="button"
+                      :show-file-list="false"
+                      action="sanic/file/upload_file"
+                      accept=".xlsx,.xls,.csv"
+                      style="display: none"
+                      @finish="finish_upload"
+                    >
+                      选择文件
+                    </n-upload>
+                  </template>
+
+                  <template
+                    #suffix
                   >
-                    选择文件
-                  </n-upload>
-                </div>
-                <n-float-button
-                  position="absolute"
-                  top="60%"
-                  right="11.5%"
-                  :type="stylizingLoading ? 'primary' : 'default'"
-                  color
-                  :class="[
-                    stylizingLoading && 'opacity-90',
-                    'text-20',
-                  ]"
-                  style="transform: translateY(-50%)"
-                  @click.stop="handleCreateStylized()"
-                >
-                  <div
-                    v-if="stylizingLoading"
-                    class="i-svg-spinners:pulse-2 c-#fff"
-                  ></div>
-                  <div
-                    v-else
-                    class="flex items-center justify-center c-#303133/60 i-mingcute:send-fill"
-                  ></div>
-                </n-float-button>
+                    <n-float-button
+                      position="absolute"
+                      :type="stylizingLoading ? 'primary' : 'default'"
+                      color
+                      right="8px"
+                      :class="[
+                        stylizingLoading && 'opacity-90',
+                        'text-20',
+                      ]"
+                      @click.stop="handleCreateStylized()"
+                    >
+                      <div
+                        v-if="stylizingLoading"
+                        class="i-svg-spinners:pulse-2 c-#fff"
+                      ></div>
+                      <div
+                        v-else
+                        class="flex items-center justify-center c-#303133/60 i-mingcute:send-fill"
+                      ></div>
+                    </n-float-button>
+                  </template>
+                </n-input>
               </n-space>
             </div>
           </div>
@@ -1370,7 +1373,7 @@ const backgroundColorVariable = ref('#ffffff')
   color: #615ced !important;
   font-weight: bold;
   padding: 12px 30px !important;
-   background: linear-gradient(to bottom, #ffffff, #f9f9ff); 
+  background: linear-gradient(to bottom, #fff, #f9f9ff);
   transform: scale(1.001);
   transition: all 0.3s ease;
 }
@@ -1423,12 +1426,13 @@ const backgroundColorVariable = ref('#ffffff')
 
 .header,
 .footer {
-   background-color: #fff;
+  background-color: #fff;
 }
 
 .content {
   border-right:1px solid #f6f7fb;
   background-color: #fff;
+
   // padding: 8px;
 }
 
@@ -1464,7 +1468,7 @@ const backgroundColorVariable = ref('#ffffff')
 .scrollable-table-container {
   overflow-y: hidden; /* 默认隐藏滚动条 */
   height: 100%; /* 根据实际情况调整高度 */
-  background-color: #ffffff;
+  background-color: #fff;
   transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1486,6 +1490,4 @@ const backgroundColorVariable = ref('#ffffff')
   background-color: #bfbfbf; /* 滚动条颜色 */
   border-radius: 3px; /* 滚动条圆角 */
 }
-
-
 </style>

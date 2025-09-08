@@ -9,7 +9,7 @@ import {
   transformStreamValue,
 } from './transform'
 
-//code高亮语法样式
+// code高亮语法样式
 import 'highlight.js/styles/atom-one-dark-reasonable.css'
 
 
@@ -713,12 +713,13 @@ const onChartCompletedReader = function () {
     margin: 10px 16px;
 
     & > code {
-       // 添加透明背景的样式
-        background-color: transparent;
-        white-space: pre;
-        padding: 2px 4px;
-        border-radius: 4px;
-        font-size: 0.9em;
+      // 添加透明背景的样式
+
+      background-color: transparent;
+      white-space: pre;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 0.9em;
     }
 
     img {
@@ -759,6 +760,7 @@ const onChartCompletedReader = function () {
   }
 
   /* 添加图片样式，约束宽度 */
+
   img {
     width: 95%; // 设置宽度为视口宽度
     height: auto; // 设置高度为视口高度
