@@ -623,7 +623,7 @@ const onSuggested = (index: number) => {
   handleCreateStylized(suggested_array.value[index])
 }
 
-const pendingUploadFileInfoList = ref<UploadFileInfo[]>([])
+const pendingUploadFileInfoList = ref<ExtendedUploadFileInfo[]>([])
 
 
 // 下拉菜单选项选择事件处理程序
@@ -768,12 +768,13 @@ const options = [
       return (
         <n-upload
           accept=".doc,.docx,.ppt,.pptx,.pdf,.txt,.xlsx,.csv"
-          default-upload={true}
+          default-upload={false}
           show-file-list={false}
           multiple={false}
-          action="sanic/file/upload_file_and_parse"
-          onBeforeUpload={(res) => {
+          onChange={(res) => {
             pendingUploadFileInfoList.value.push(res.file)
+            // 触发实际上传
+            handleFileUpload(res.file)
           }}
         >
           <div class="px-4">
@@ -794,14 +795,23 @@ const options = [
     type: 'render',
     render() {
       return (
-        <n-upload
-          accept="image/*"
-          default-upload={false}
-          show-file-list={false}
-          multiple
-          onChange={(res) => {
-            pendingUploadFileInfoList.value.push(res.file)
-          }}
+        // <n-upload
+        //   accept="image/*"
+        //   default-upload={false}
+        //   show-file-list={false}
+        //   multiple
+        //   onChange={(res) => {
+        //     pendingUploadFileInfoList.value.push(res.file)
+        //     // 触发实际上传
+        //     handleFileUpload(res.file)
+        //   }}
+        // >
+        <div onClick={(e) => {
+          // 阻止事件冒泡
+          e.stopPropagation()
+          // 显示提示信息
+          window.$ModalMessage.info('暂不支持图片解析')
+        }}
         >
           <div class="px-4">
             <div
@@ -812,12 +822,64 @@ const options = [
               <span>上传图片</span>
             </div>
           </div>
-        </n-upload>
+        </div>
       )
     },
   },
 ]
 
+// 在您的项目中添加类型扩展
+interface ExtendedUploadFileInfo extends UploadFileInfo {
+  error?: Error
+}
+// 处理文件上传的函数
+const handleFileUpload = async (fileInfo: ExtendedUploadFileInfo) => {
+  const formData = new FormData()
+  if (fileInfo.file) {
+    formData.append('file', fileInfo.file)
+  }
+
+  try {
+    const response = await fetch('sanic/file/upload_file_and_parse', {
+      method: 'POST',
+      body: formData,
+    })
+
+    const result = await response.json()
+
+    if (result.code === 200) {
+      // 更新文件状态为成功
+      const index = pendingUploadFileInfoList.value.findIndex((f) => f.id === fileInfo.id)
+      if (index !== -1) {
+        pendingUploadFileInfoList.value[index].status = 'finished'
+        pendingUploadFileInfoList.value[index].percentage = 100
+        // 设置文件URL
+        businessStore.update_file_url(result.data.object_key)
+      }
+      window.$ModalMessage.success(`文件上传并解析成功`)
+    } else {
+      // 更新文件状态为失败
+      const index = pendingUploadFileInfoList.value.findIndex((f) => f.id === fileInfo.id)
+      if (index !== -1) {
+        pendingUploadFileInfoList.value[index].status = 'error'
+        pendingUploadFileInfoList.value[index].error = new Error(result.message || '上传失败')
+      }
+      window.$ModalMessage.error(`文件上传失败`)
+    }
+  } catch (error) {
+    // 更新文件状态为失败
+    const index = pendingUploadFileInfoList.value.findIndex((f) => f.id === fileInfo.id)
+    if (index !== -1) {
+      pendingUploadFileInfoList.value[index].status = 'error'
+      if (error instanceof Error) {
+        pendingUploadFileInfoList.value[index].error = error
+      } else {
+        pendingUploadFileInfoList.value[index].error = new Error(String(error))
+      }
+    }
+    window.$ModalMessage.error(`文件上传失败: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
 const UploadWrapperItem = defineComponent({
   name: 'UploadWrapperItem',
   props: {
@@ -846,8 +908,21 @@ const UploadWrapperItem = defineComponent({
         icon: 'i-carbon:checkmark',
       },
     ])
-    const _status = ref('parsing')
 
+    // 根据实际上传文件状态确定解析状态
+    const _status = computed(() => {
+      if (props.fileInfo.status === 'finished') {
+        if ((props.fileInfo as ExtendedUploadFileInfo).percentage === 100 && !(props.fileInfo as ExtendedUploadFileInfo).error) {
+          return 'success'
+        } else if ((props.fileInfo as ExtendedUploadFileInfo).error) {
+          return 'failed'
+        }
+        return 'parsing'
+      } else if (props.fileInfo.status === 'error') {
+        return 'failed'
+      }
+      return 'parsing'
+    })
 
     const isImage = computed(() => {
       return props.fileInfo.type?.includes('image')
@@ -873,12 +948,6 @@ const UploadWrapperItem = defineComponent({
 
     watchEffect(onImageFile)
 
-
-    // 模拟一下整个解析的过程, 比如几秒后变一下
-    setTimeout(() => {
-      _status.value = 'success'
-    }, 5000)
-
     const currentStatus = computed(() => {
       return statusList.value.find((item) => item.status === _status.value)
     })
@@ -890,8 +959,9 @@ const UploadWrapperItem = defineComponent({
       docx: 'i-vscode-icons:file-type-word',
       doc: 'i-vscode-icons:file-type-word',
       pdf: 'i-vscode-icons:file-type-pdf2',
+      pptx: 'i-vscode-icons:file-type-powerpoint',
+      ppt: 'i-vscode-icons:file-type-powerpoint',
     })
-
 
     const fileIcon = computed(() => {
       const fileExtension = fileName.value.split('.').pop()?.toLowerCase()
@@ -1432,7 +1502,7 @@ const UploadWrapperItem = defineComponent({
                   >
                     <UploadWrapperItem
                       v-for="(pendingUploadFileInfo, index) in pendingUploadFileInfoList"
-                      :key="index"
+                      :key="pendingUploadFileInfo.id"
                       :fileInfo="pendingUploadFileInfo"
                       @remove="() => {
                         pendingUploadFileInfoList.splice(index, 1)
