@@ -73,8 +73,8 @@ async def upload_file_and_parse(request: Request):
     :param request:
     :return:
     """
-    file_key = minio_utils.upload_file_and_parse_from_request(request=request)
-    return file_key
+    file_key_dict = minio_utils.upload_file_and_parse_from_request(request=request)
+    return file_key_dict
 
 
 @bp.post("/process_file_llm_out")

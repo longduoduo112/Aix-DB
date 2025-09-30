@@ -9,5 +9,8 @@ if [ ! -f "$SQL_FILE" ]; then
     exit 1
 fi
 
-# 调用 Python 脚本
+# 调用 Python 脚本 初始化mysql数据表
 python3 ../common/initialize_mysql.py
+
+# 调用 Python 脚本 初始化表关系
+python3 ../common/initialize_eno4j.py

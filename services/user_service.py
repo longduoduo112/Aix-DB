@@ -171,6 +171,7 @@ async def add_user_record(
     to4_answer: dict[str, Any],
     qa_type: str,
     user_token: str,
+    file_list: dict[str, Any] = None,
 ):
     """
     新增用户问答记录
@@ -193,8 +194,8 @@ async def add_user_record(
         # 3. 插入数据库
         insert_sql = """
             INSERT INTO t_user_qa_record
-            (uuid, user_id, chat_id, question, to2_answer,to4_answer, qa_type)
-            VALUES (%s, %s, %s, %s, %s, %s,%s)
+            (uuid, user_id, chat_id, question, to2_answer,to4_answer, qa_type,file_key)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         insert_params = [
             uuid_str,
@@ -204,6 +205,7 @@ async def add_user_record(
             t02_answer_str,
             json.dumps(to4_answer, ensure_ascii=False),
             qa_type,
+            json.dumps(file_list, ensure_ascii=False) if file_list and len(file_list) > 0 else "",
         ]
 
         # 如果 mysql_client.insert 是异步方法
@@ -255,6 +257,7 @@ async def query_user_record(user_id, page, limit, search_text, chat_id):
     if chat_id:
         conditions.append(f"chat_id = '{chat_id}'")
     if search_text:
+        search_text = search_text.strip()  # 去除search_text首尾空格
         conditions.append(f"question LIKE '%{search_text}%'")
     elif user_id:
         conditions.append(f"user_id = {user_id}")

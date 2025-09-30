@@ -176,7 +176,7 @@ CREATE TABLE `t_user_qa_record` (
   `to2_answer` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '大模型答案',
   `to4_answer` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '业务数据',
   `qa_type` varchar(100) DEFAULT NULL COMMENT '问答类型',
-  `file_key` varchar(100) DEFAULT NULL COMMENT '文件minio/key',
+   `file_key` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '文件minio/key',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=567 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='问答记录表';

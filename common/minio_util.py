@@ -1,4 +1,6 @@
+import csv
 import io
+import json
 import logging
 import mimetypes
 import os
@@ -6,6 +8,7 @@ import traceback
 from datetime import timedelta
 from uuid import uuid4
 
+import pandas as pd
 import pymupdf
 import pymupdf4llm
 from docx import Document
@@ -157,7 +160,11 @@ class MinioUtils:
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation",  # .pptx
                 "application/vnd.ms-powerpoint",  # .ppt
                 "application/pdf",  # .pdf
+                "text/csv",  # .csv
             }
+
+            # 获取文件大小
+            file_size = len(file_data.body)
 
             if mime_type not in allowed_mimes:
                 raise ValueError("不支持的文件格式")
@@ -172,13 +179,15 @@ class MinioUtils:
             elif mime_type == "text/plain":
                 content.seek(0)
                 full_text = content.read().decode("utf-8")
-
+            elif mime_type == "text/csv":
+                content.seek(0)
+                full_text = self._parse_csv(content)
             elif mime_type in (
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "application/vnd.ms-excel",
             ):
                 content.seek(0)
-                full_text = self.read_pdf_text_from_bytes(content.getvalue())
+                full_text = self._parse_excel(content, mime_type)
             elif mime_type in (
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation",
                 "application/vnd.ms-powerpoint",
@@ -186,7 +195,7 @@ class MinioUtils:
                 content.seek(0)
                 full_text = self.read_pdf_text_from_bytes(content.getvalue())
             elif mime_type == "application/pdf":
-                # todo 如果pdf文件中包含图片，则需要使用OCR处理图片 私有化部署mineru支持
+                # todo 如果pdf文件中包含图片，则需要使用OCR处理图片 私有化部署minerU支持
                 content.seek(0)
                 full_text = self.read_pdf_text_from_bytes(content.getvalue())
             else:
@@ -196,12 +205,133 @@ class MinioUtils:
             parse_file_key = self.upload_to_minio_form_stream(
                 io.BytesIO(full_text.encode("utf-8")), bucket_name, object_name + file_suffix
             )
-            return {"source_file_key": source_file_key["object_key"], "parse_file_key": parse_file_key}
-
+            return {
+                "source_file_key": source_file_key["object_key"],
+                "parse_file_key": parse_file_key,
+                "file_size": self._format_file_size(file_size),
+            }
         except Exception as err:
             logger.error(f"Error uploading file and parsing from request: {err}")
             traceback.print_exception(type(err), err, err.__traceback__)
             raise MyException(SysCode.c_9999) from err
+
+    @staticmethod
+    def _format_file_size(size_bytes: int) -> str:
+        """
+        将字节大小转换为人类可读的格式 (如: 12KB, 1MB)
+
+        :param size_bytes: 文件大小（字节）
+        :return: 格式化后的文件大小字符串
+        """
+        if size_bytes == 0:
+            return "0B"
+
+        size_names = ["B", "KB", "MB", "GB", "TB"]
+        i = 0
+        while size_bytes >= 1024.0 and i < len(size_names) - 1:
+            size_bytes /= 1024.0
+            i += 1
+
+        if i == 0:
+            # 对于字节，不使用小数点
+            return f"{int(size_bytes)}{size_names[i]}"
+        else:
+            # 对于KB及以上，保留一位小数
+            return f"{size_bytes:.1f}{size_names[i]}"
+
+    @staticmethod
+    def _parse_csv(content):
+        """
+        解析CSV文件内容
+        :param content: CSV文件内容
+        :return: 解析后的文本
+        """
+        try:
+            content.seek(0)
+            # 尝试不同的编码
+            encodings = ["utf-8", "gbk", "gb2312"]
+            lines = None
+            for encoding in encodings:
+                try:
+                    content.seek(0)
+                    text = content.read().decode(encoding)
+                    lines = text.splitlines()
+                    break
+                except UnicodeDecodeError:
+                    continue
+
+            if lines is None:
+                raise ValueError("无法解码CSV文件")
+
+            full_text = ""
+            reader = csv.reader(lines)
+            for row in reader:
+                full_text += "\t".join(row) + "\n"
+            return full_text
+        except Exception as e:
+            logger.error(f"读取CSV文件时出错: {e}")
+            raise MyException(SysCode.c_9999, "CSV解析失败") from e
+
+    @staticmethod
+    def _parse_excel(content, mime_type):
+        """
+        解析Excel文件内容，输出结构化JSON，便于大模型识别
+        自动根据 MIME 类型选择正确引擎，避免 xlrd 读取 .xlsx
+        :param content: Excel文件内容（BytesIO 或 bytes）
+        :param mime_type: 文件MIME类型
+        :return: JSON 字符串，含结构化表格数据
+        """
+        try:
+            if isinstance(content, bytes):
+                content = io.BytesIO(content)
+
+            # 根据 MIME 类型智能选择引擎，避免 xlrd 读取 .xlsx
+            if mime_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":  # .xlsx
+                engine = "openpyxl"
+            elif mime_type == "application/vnd.ms-excel":  # .xls
+                engine = "xlrd"
+            else:
+                # 默认尝试 openpyxl（更安全）
+                engine = "openpyxl"
+                logger.warning(f"未知 MIME 类型: {mime_type}，默认使用 openpyxl 引擎")
+
+            xls = pd.ExcelFile(content, engine=engine)
+
+            result = {"file_type": "excel", "mime_type": mime_type, "engine_used": engine, "sheets": []}
+
+            for sheet_name in xls.sheet_names:
+                # 读取时不自动推断 header，保留原始行列结构
+                df = pd.read_excel(xls, sheet_name=sheet_name, header=None)
+                sheet_data = {
+                    "sheet_name": sheet_name,
+                    "nrows": len(df),
+                    "ncols": len(df.columns) if not df.empty else 0,
+                    "rows": [],
+                }
+
+                for row_idx, row in df.iterrows():
+                    row_cells = []
+                    for col_idx, cell in enumerate(row):
+                        # 保留原始值类型（int/float/datetime 等），转字符串用于显示
+                        raw_value = cell
+                        display_value = str(cell) if pd.notna(cell) else None
+                        row_cells.append(
+                            {
+                                "row": row_idx + 1,  # 从 1 开始，符合人类习惯
+                                "col": col_idx + 1,
+                                "value": display_value,  # 用于显示/LLM 理解
+                                "raw_value": raw_value,  # 保留原始数据类型
+                            }
+                        )
+                    sheet_data["rows"].append(row_cells)
+
+                result["sheets"].append(sheet_data)
+
+            return json.dumps(result, ensure_ascii=False, indent=2, default=str)
+
+        except Exception as e:
+            logger.error(f"读取Excel文件时出错: {e}")
+            raise MyException(SysCode.c_9999, "Excel解析失败") from e
 
     @staticmethod
     def read_pdf_text_from_bytes(file_bytes):
@@ -217,3 +347,45 @@ class MinioUtils:
         except Exception as e:
             logger.error(f"读取文本时出错: {e}")
             raise MyException(SysCode.c_9999, "PDF 解析失败") from e
+
+    def get_files_content_as_markdown(self, file_info_list: list, bucket_name: str = "filedata") -> str:
+        """
+        根据文件信息列表获取文件内容并拼接成Markdown格式
+
+        参数:
+        - file_info_list: 文件信息列表，格式如 [{"source_file_key": "销售数据.xlsx", "parse_file_key": "销售数据.xlsx.txt", "file_size": "11.0KB"}]
+        - bucket_name: 存储桶名称
+
+        返回:
+        - 拼接后的Markdown格式文本
+        """
+        result_parts = []
+
+        for file_info in file_info_list:
+            source_file_key = file_info.get("source_file_key")
+            parse_file_key = file_info.get("parse_file_key")
+
+            if not parse_file_key:
+                continue
+
+            try:
+                # 获取文件内容
+                response = self.client.get_object(bucket_name, parse_file_key)
+                content = response.data.decode("utf-8")
+                response.close()
+                response.release_conn()
+
+                # 获取文件扩展名
+                _, ext = os.path.splitext(source_file_key or parse_file_key)
+
+                # 构建Markdown格式文本
+                file_part = f"- 文件名称: {source_file_key}\n- 文件格式: {ext}\n- 文件内容: {content}"
+                result_parts.append(file_part)
+
+            except Exception as e:
+                logger.error(f"读取文件 {parse_file_key} 内容时出错: {e}")
+                # 即使某个文件读取出错也继续处理其他文件
+                continue
+
+        # 使用分隔线连接各部分
+        return "\n----------\n".join(result_parts) if result_parts else ""

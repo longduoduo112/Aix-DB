@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 from typing import Dict, Any, Optional
 
 from langgraph.graph.state import CompiledStateGraph
@@ -21,6 +22,8 @@ class Text2SqlAgent:
     def __init__(self):
         # 存储运行中的任务
         self.running_tasks = {}
+        # 获取环境变量控制是否显示思考过程，默认为开启
+        self.show_thinking_process = os.getenv("SHOW_THINKING_PROCESS", "true").lower() == "true"
 
     async def run_agent(
         self, query: str, response=None, chat_id: str = None, uuid_str: str = None, user_token=None
@@ -49,29 +52,12 @@ class Text2SqlAgent:
             task_context = {"cancelled": False}
             self.running_tasks[task_id] = task_context
 
-            # async for chunk in graph.astream(initial_state, stream_mode="values"):
-            #
-            #     # if metadata["langgraph_node"] == "tools":
-            #     #     tool_name = message_chunk.name or "未知工具"
-            #     #     # logger.info(f"工具调用结果:{message_chunk.content}")
-            #     #     tool_use = "> 调用工具:" + tool_name + "\n\n"
-            #     #     await response.write(self._create_response(tool_use))
-            #     #     t02_answer_data.append(tool_use)
-            #     #     continue
-            #     print(chunk)
-            #     # if chunk.content:
-            #     #     logger.info(f"chuck>{chunk}")
-            #     #     logger.info(f"metadata>{metadata}")
-            #     #     await response.write(self._create_response(chunk.content))
-            #     #     if hasattr(response, "flush"):
-            #     #         await response.flush()
-            #     #     await asyncio.sleep(0)
-
             async for chunk_dict in graph.astream(initial_state, stream_mode="updates"):
 
                 # 检查是否已取消
                 if self.running_tasks[task_id]["cancelled"]:
-                    await self._send_response(response, "</details>\n\n", "continue", DataTypeEnum.ANSWER.value[0])
+                    if self.show_thinking_process:
+                        await self._send_response(response, "</details>\n\n", "continue", DataTypeEnum.ANSWER.value[0])
                     await response.write(
                         self._create_response("\n> 这条消息已停止", "info", DataTypeEnum.ANSWER.value[0])
                     )
@@ -95,8 +81,9 @@ class Text2SqlAgent:
                     )
 
             # 流结束时关闭最后的details标签
-            if current_step is not None and current_step not in ["summarize", "data_render", "data_render_apache"]:
-                await self._close_current_step(response, t02_answer_data)
+            if self.show_thinking_process:
+                if current_step is not None and current_step not in ["summarize", "data_render", "data_render_apache"]:
+                    await self._close_current_step(response, t02_answer_data)
 
             # 只有在未取消的情况下才保存记录
             if not self.running_tasks[task_id]["cancelled"]:
@@ -108,6 +95,7 @@ class Text2SqlAgent:
                     t04_answer_data,
                     DiFyAppEnum.DATABASE_QA.value[0],
                     user_token,
+                    {},
                 )
 
         except asyncio.CancelledError:
@@ -128,18 +116,25 @@ class Text2SqlAgent:
         """
         处理步骤变更
         """
-        if new_step != current_step:
-            # 如果之前有打开的步骤，先关闭它
-            if current_step is not None and current_step not in ["summarize", "data_render", "data_render_apache"]:
-                await self._close_current_step(response, t02_answer_data)
+        if self.show_thinking_process:
+            if new_step != current_step:
+                # 如果之前有打开的步骤，先关闭它
+                if current_step is not None and current_step not in ["summarize", "data_render", "data_render_apache"]:
+                    await self._close_current_step(response, t02_answer_data)
 
-            # 打开新的步骤 (除了 summarize 和 data_render)
-            if new_step not in ["summarize", "data_render", "data_render_apache"]:
-                think_html = f"""<details style="color:gray;background-color: #f8f8f8;padding: 2px;border-radius: 
-                6px;margin-top:5px;" open>
-                             <summary>{new_step}...</summary>"""
-                await self._send_response(response, think_html, "continue", "t02")
-                t02_answer_data.append(think_html)
+                # 打开新的步骤 (除了 summarize 和 data_render) think_html 标签里面添加open属性控制思考过程是否默认展开显示
+                if new_step not in ["summarize", "data_render", "data_render_apache"]:
+                    think_html = f"""<details style="color:gray;background-color: #f8f8f8;padding: 2px;border-radius: 
+                    6px;margin-top:5px;">
+                                 <summary>{new_step}...</summary>"""
+                    await self._send_response(response, think_html, "continue", "t02")
+                    t02_answer_data.append(think_html)
+        else:
+            # 如果不显示思考过程，则只处理特定的步骤
+            if new_step in ["summarize", "data_render", "data_render_apache"]:
+                # 对于需要显示的步骤，确保之前的步骤已关闭
+                if current_step is not None and current_step not in ["summarize", "data_render", "data_render_apache"]:
+                    pass  # 不需要关闭details标签，因为我们根本没有打开它
 
         return new_step, t02_answer_data
 
@@ -147,9 +142,10 @@ class Text2SqlAgent:
         """
         关闭当前步骤的details标签
         """
-        close_tag = "</details>\n\n"
-        await self._send_response(response, close_tag, "continue", "t02")
-        t02_answer_data.append(close_tag)
+        if self.show_thinking_process:
+            close_tag = "</details>\n\n"
+            await self._send_response(response, close_tag, "continue", "t02")
+            t02_answer_data.append(close_tag)
 
     async def _process_step_content(
         self,
@@ -163,9 +159,9 @@ class Text2SqlAgent:
         处理各个步骤的内容
         """
         content_map = {
-            "schema_inspector": lambda: self._format_db_info(
-                step_value["db_info"]
-            ),  # "llm_reasoning": lambda: step_value["sql_reasoning"],
+            "schema_inspector": lambda: self._format_db_info(step_value["db_info"]),
+            # "llm_reasoning": lambda: step_value["sql_reasoning"],
+            "table_relationship": lambda: json.dumps(step_value["table_relationship"], ensure_ascii=False),
             "sql_generator": lambda: step_value["generated_sql"],
             "sql_executor": lambda: "执行sql语句成功" if step_value["execution_result"].success else "执行sql语句失败",
             "summarize": lambda: step_value["report_summary"],
@@ -183,10 +179,14 @@ class Text2SqlAgent:
                 DataTypeEnum.ANSWER.value[0] if step_name != "data_render_apache" else DataTypeEnum.BUS_DATA.value[0]
             )
 
-            await self._send_response(response=response, content=content, data_type=data_type)
+            # 根据环境变量决定是否发送非关键步骤的内容
+            should_send = self.show_thinking_process or step_name in ["summarize", "data_render", "data_render_apache"]
 
-            if data_type == DataTypeEnum.ANSWER.value[0]:
-                t02_answer_data.append(content)
+            if should_send:
+                await self._send_response(response=response, content=content, data_type=data_type)
+
+                if data_type == DataTypeEnum.ANSWER.value[0]:
+                    t02_answer_data.append(content)
 
             # 这里设置 Apache 表格数据
             if step_name == "data_render_apache" and data_type == DataTypeEnum.BUS_DATA.value[0]:

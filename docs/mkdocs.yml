@@ -21,7 +21,9 @@ theme:
     - content.code.annotate # 代码注释，具体不清楚
     - content.code.copy # 复制代码按钮
     - content.tooltips # 不太清楚呢这个
+    - navigation.top # 顶部导航栏
     - navigation.expand # 默认展开导航栏
+
 
 plugins:
   - tags
@@ -40,6 +42,7 @@ plugins:
           build: true # 是否构建
         - locale: zh
           name: 简体中文
+          nav_translations: # 导航栏翻译，不可以有缩进
 
   # 版权信息
 copyright: Copyright &copy; 2025 apconw

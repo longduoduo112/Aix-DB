@@ -1,11 +1,11 @@
 <script lang="tsx" setup>
-import type { InputInst } from 'naive-ui'
-import { init } from 'echarts'
-import { backTopDark } from 'naive-ui'
+import type { InputInst, UploadFileInfo } from 'naive-ui'
 import { UAParser } from 'ua-parser-js'
 import * as GlobalAPI from '@/api'
 import { isMockDevelopment } from '@/config'
 import DefaultPage from './DefaultPage.vue'
+import FileListItem from './FileListItem.vue'
+import FileUploadManager from './FileUploadManager.vue'
 import SuggestedView from './SuggestedPage.vue'
 import TableModal from './TableModal.vue'
 
@@ -140,9 +140,9 @@ const onCompletedReader = (index: number) => {
   }
 
   // 查询是推荐列表
-  if (isView.value == false
-    && qa_type.value != 'COMMON_QA'
-    && qa_type.value != 'DATABASE_QA') {
+  if (isView.value === false
+    && qa_type.value !== 'COMMON_QA'
+    && qa_type.value !== 'DATABASE_QA') {
     query_dify_suggested()
   }
 }
@@ -163,9 +163,6 @@ const onRecycleQa = async (index: number) => {
   const item = conversationItems.value[index]
   onAqtiveChange(item.qa_type, item.chat_id)
 
-  if (item.qa_type === 'FILEDATA_QA') {
-    businessStore.update_file_url(item.file_key)
-  }
 
   // 清空推荐列表
   suggested_array.value = []
@@ -221,9 +218,13 @@ const conversationItems = ref<
     chat_id: string
     qa_type: string
     question: string
-    file_key: string
     role: 'user' | 'assistant'
     reader: ReadableStreamDefaultReader | null
+    file_key: {
+      source_file_key: string
+      parse_file_key: string
+      file_size: string
+    }[]
   }>
 >([])
 
@@ -236,13 +237,56 @@ const contentLoadingStates = ref(
   visibleConversationItems.value.map(() => false),
 )
 
-//
 
+// 改为对象存储不同问答类型的uuid
+const uuids = ref<Record<string, string>>({})
 
-const uuids = ref<Record<string, string>>({}) // 改为对象存储不同问答类型的uuid
+// 校验文件上传状态和业务处理逻辑
+const checkAllFilesUploaded = () => {
+  const pendingFiles = fileUploadRef.value?.pendingUploadFileInfoList || []
+
+  // 新增：数据问答不支持文件上传
+  if (qa_type.value === 'DATABASE_QA' && pendingFiles.length > 0) {
+    window.$ModalMessage.warning('数据问答不支持文件上传，请切换到智能问答和表格问答')
+    return false
+  }
+  if (qa_type.value === 'REPORT_QA' && pendingFiles.length > 0) {
+    window.$ModalMessage.warning('深度搜索暂不支持文件上传(你可以输入“大模型”)，功能正在开发中..')
+    return false
+  }
+
+  // 新增：表格问答只支持单个excel文件
+  if (qa_type.value === 'FILEDATA_QA') {
+    if (pendingFiles.length > 1) {
+      window.$ModalMessage.warning('表格问答只支持上传单个文件')
+      return false
+    }
+
+    if (pendingFiles.length === 1) {
+      const file = pendingFiles[0]
+      const fileName = file.name?.toLowerCase() || ''
+      const isExcelFile = fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')
+
+      if (!isExcelFile) {
+        window.$ModalMessage.warning('表格问答只支持Excel文件格式(.xlsx, .xls ,.csv)')
+        return false
+      }
+    }
+  }
+
+  for (const file of pendingFiles) {
+    if (file.status !== 'finished') {
+      window.$ModalMessage.warning('存在未完成上传或解析失败的文件，请检查后重试')
+      return false
+    }
+  }
+  return true
+}
+
 
 // 提交对话
 const handleCreateStylized = async (send_text = '') => {
+  // 设置背景颜色
   backgroundColorVariable.value = '#f6f7fb'
 
   // 滚动到底部
@@ -276,19 +320,26 @@ const handleCreateStylized = async (send_text = '') => {
     }
   }
 
-  // 如果没有上传文件 表格问答直接提示并返回
-  if (
-    qa_type.value === 'FILEDATA_QA'
-    && `${businessStore.$state.file_url}` === ''
-  ) {
-    window.$ModalMessage.success('请先上传文件')
-    return
+  let upload_file_list
+  // 判断是否有未上传的文件
+  if (fileUploadRef.value?.pendingUploadFileInfoList && fileUploadRef.value.pendingUploadFileInfoList.length > 0) {
+    // console.log(fileUploadRef.value.pendingUploadFileInfoList)
+    // console.log(businessStore.file_list)
+    // 有一个文件解析失败不允许提交
+    if (!checkAllFilesUploaded()) {
+      return
+    }
+    upload_file_list = businessStore.file_list
   }
 
   if (showDefaultPage.value) {
     // 新建对话 时输入新问题 清空历史数据
     conversationItems.value = []
     showDefaultPage.value = false
+
+    // 清空文件上传列表
+    pendingUploadFileInfoList.value = []
+    businessStore.clear_file_list()
   }
 
   // 自定义id
@@ -318,22 +369,27 @@ const handleCreateStylized = async (send_text = '') => {
     uuids.value[qa_type.value] = uuidv4()
   }
 
+  // 存储该轮用户对话消息
   if (textContent) {
-    // 存储该轮用户对话消息
     conversationItems.value.push({
       uuid: uuid_str,
       chat_id: uuids.value[qa_type.value],
       qa_type: qa_type.value,
       question: textContent,
-      file_key: '',
+      file_key: upload_file_list,
       role: 'user',
       reader: null,
     })
     // 更新 currentRenderIndex 以包含新添加的项
     currentRenderIndex.value = conversationItems.value.length - 1
     contentLoadingStates.value[currentRenderIndex.value] = true
+
+    // 清空文件上传列表
+    pendingUploadFileInfoList.value = []
+    businessStore.clear_file_list()
   }
 
+  // 调用大模型
   const { error, reader, needLogin }
     = await businessStore.createAssistantWriterStylized(
       uuid_str,
@@ -342,38 +398,52 @@ const handleCreateStylized = async (send_text = '') => {
       {
         text: textContent,
         writer_oid: currentChatId.value,
+        file_list: upload_file_list,
       },
     )
 
   if (needLogin) {
     message.error('登录已失效，请重新登录')
 
+    // 清空文件上传列表
+    pendingUploadFileInfoList.value = []
+    businessStore.clear_file_list()
+
     // 跳转至登录页面
     setTimeout(() => {
       router.push('/login')
-    }, 2000)
+    }, 500)
   }
 
   if (error) {
     stylizingLoading.value = false
     onCompletedReader(conversationItems.value.length - 1)
+
+    // 清空文件上传列表
+    pendingUploadFileInfoList.value = []
+    businessStore.clear_file_list()
     return
   }
 
   if (reader) {
-    outputTextReader.value = reader
     // 存储该轮AI回复的消息
+    outputTextReader.value = reader
     conversationItems.value.push({
       uuid: uuid_str,
       chat_id: uuids.value[qa_type.value],
       qa_type: qa_type.value,
       question: textContent,
-      file_key: `${businessStore.$state.file_url}`,
+      file_key: [],
       role: 'assistant',
       reader,
     })
+
     // 更新 currentRenderIndex 以包含新添加的项
     currentRenderIndex.value = conversationItems.value.length - 1
+
+    // 清空文件上传列表
+    pendingUploadFileInfoList.value = []
+    businessStore.clear_file_list()
   }
 
   // 滚动到底部
@@ -382,7 +452,7 @@ const handleCreateStylized = async (send_text = '') => {
 
 // 滚动到底部
 const scrollToBottom = () => {
-  if (isView.value == false) {
+  if (isView.value === false) {
     nextTick(() => {
       if (messagesContainer.value) {
         messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
@@ -473,26 +543,6 @@ const handleResetState = () => {
 }
 handleResetState()
 
-// 文件上传
-const file_name = ref('')
-const finish_upload = (res) => {
-  file_name.value = res.file.name
-  if (res.event.target.responseText) {
-    const json_data = JSON.parse(res.event.target.responseText)
-    const file_url = json_data.data.object_key
-    if (json_data.code === 200) {
-      onAqtiveChange('FILEDATA_QA', '')
-      businessStore.update_file_url(file_url)
-      window.$ModalMessage.success(`文件上传成功`)
-    } else {
-      window.$ModalMessage.error(`文件上传失败`)
-      return
-    }
-    const file_name_without_extension = file_name.value.slice(0, file_name.value.lastIndexOf('.')) || file_name.value
-    const query_text = `分析${file_name_without_extension}表格数据`
-    handleCreateStylized(query_text)
-  }
-}
 
 // 下面方法用于左侧对话列表点击 右侧内容滚动
 // 用于存储每个 MarkdownPreview 容器的引用
@@ -597,9 +647,9 @@ const onAqtiveChange = (val, chat_id) => {
   }
 
   // 清空文件上传历史url
-  if (val === 'FILEDATA_QA') {
-    businessStore.update_file_url('')
-  }
+  // if (val === 'FILEDATA_QA') {
+  //   businessStore.update_file_url('')
+  // }
 }
 
 // 获取建议问题
@@ -623,51 +673,6 @@ const onSuggested = (index: number) => {
     onAqtiveChange('COMMON_QA', '')
   }
   handleCreateStylized(suggested_array.value[index])
-}
-
-// 下拉菜单的选项
-const options = [
-  {
-    label: () => h('span', null, '上传文档'),
-    icon: () =>
-      h('div', {
-        class: 'i-vscode-icons:file-type-excel2',
-        style: 'inline-block:none',
-      }),
-    key: 'excel',
-  },
-  {
-    label: () => h('span', null, '上传图片'),
-    icon: () =>
-      h('div', {
-        class: 'i-vscode-icons:file-type-image',
-        style: 'inline-block:none',
-      }),
-    key: 'image',
-  },
-]
-
-// 下拉菜单选项选择事件处理程序
-const uploadRef = useTemplateRef('uploadRef')
-function handleSelect(key: string) {
-  if (key === 'excel') {
-    // 使用 nextTick 确保 DOM 更新完成后执行
-    nextTick(() => {
-      if (uploadRef.value) {
-        // 尝试直接调用 n-upload 的点击方法
-        // 如果 n-upload 没有提供这样的方法，可以查找内部的 input 并调用 click 方法
-        const fileInput
-                    = uploadRef.value.$el.querySelector('input[type="file"]')
-        if (fileInput) {
-          fileInput.click()
-        }
-      }
-    })
-  } else {
-    window.$ModalMessage.success('功能开发中', {
-      duration: 1500,
-    })
-  }
 }
 
 // 侧边表格滚动条数 动态显示隐藏设置
@@ -736,6 +741,59 @@ const collapsed = useLocalStorage(
 
 // 背景颜色 默认页面和内容页面动态调整
 const backgroundColorVariable = ref('#ffffff')
+
+
+// 添加一键滚动到底部功能的相关代码
+const showScrollToBottom = ref(false)
+const scrollThreshold = 1000 // 滚动超过100px时显示按钮
+
+// 用户点击图标滚动到底部
+const clickScrollToBottom = () => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      showScrollToBottom.value = false // 滚动到底部后隐藏按钮
+    }
+  })
+}
+
+// ======新增：检查是否需要显示滚动到底部按钮==========//
+const checkScrollPosition = () => {
+  if (messagesContainer.value) {
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10 // 10px的容差
+    showScrollToBottom.value = !isAtBottom && scrollTop > scrollThreshold
+  }
+}
+// 新增：监听滚动事件
+const handleScroll = () => {
+  checkScrollPosition()
+}
+
+// 在 onMounted 或 onBeforeMount 中添加事件监听
+onMounted(() => {
+  if (messagesContainer.value) {
+    messagesContainer.value.addEventListener('scroll', handleScroll)
+  }
+})
+
+// 在组件卸载前移除事件监听
+onBeforeUnmount(() => {
+  if (messagesContainer.value) {
+    messagesContainer.value.removeEventListener('scroll', handleScroll)
+  }
+})
+
+// ============================== 文件上传 ============================//
+interface FileUploadRef {
+  pendingUploadFileInfoList: UploadFileInfo[] | null | undefined
+  options?: any[]
+  reset?: () => void
+}
+const fileUploadRef = ref<FileUploadRef | null>(null)
+
+// 用于绑定文件上传信息列表
+const pendingUploadFileInfoList = ref([])
 </script>
 
 <template>
@@ -756,7 +814,7 @@ const backgroundColorVariable = ref('#ffffff')
         :collapsed-width="0"
         :width="260"
         :show-collapsed-content="false"
-        show-trigger="bar"
+        show-trigger="arrow-circle"
         bordered
       >
         <div
@@ -849,7 +907,7 @@ const backgroundColorVariable = ref('#ffffff')
             style="flex-shrink: 0"
           >
             <n-divider
-              style="width: calc(100% - 50px); margin-left: 25px; margin-right: 25px;
+              style="width: calc(100% - 60px); margin-left: 25px; margin-right: 35px;
 
 --n-color: #e8eaf2;"
             />
@@ -906,6 +964,7 @@ const backgroundColorVariable = ref('#ffffff')
             pb-20
             class="scrollable-container"
             :style="{ backgroundColor: backgroundColorVariable }"
+            @scroll="handleScroll"
           >
             <!-- 默认对话页面 -->
             <transition name="fade">
@@ -968,6 +1027,19 @@ const backgroundColorVariable = ref('#ffffff')
                     </n-space>
                   </div>
 
+                  <!-- 用户上传的文件列表 -->
+                  <div
+                    v-if="item.file_key && item.file_key.length > 0"
+                    class="upload-wrapper-list flex flex-wrap gap-10 items-center pb-5"
+                    style="margin-left: 10%; margin-right: 10.5%; width: 80%; justify-content: flex-end;"
+                  >
+                    <FileListItem
+                      v-for="(file, fileIndex) in item.file_key"
+                      :key="fileIndex"
+                      :file="file"
+                    />
+                  </div>
+
                   <!-- 加载动画：紧跟在消息下方，但对齐到左边 -->
                   <div
                     v-if="contentLoadingStates[index]"
@@ -1020,16 +1092,27 @@ const backgroundColorVariable = ref('#ffffff')
           </div>
 
           <div
+            v-show="showScrollToBottom"
+            class="scroll-to-bottom-btn"
+            @click="clickScrollToBottom"
+          >
+            <div class="i-mingcute:arrow-down-fill"></div>
+          </div>
+
+          <div
             :class="['items-center', 'shrink-0', `bg-${backgroundColorVariable}`]"
           >
             <div
               relative
               class="flex-1 w-full p-1em"
             >
-              <n-space vertical>
+              <n-space
+                vertical
+                class="mx-10%"
+              >
                 <div
                   flex="~ gap-10"
-                  class="h-40 ml-10%"
+                  class="h-40"
                 >
                   <n-button
                     type="default"
@@ -1169,102 +1252,96 @@ const backgroundColorVariable = ref('#ffffff')
                         </svg>
                       </n-icon>
                     </template>
-                    报告问答
+                    深度搜索
                   </n-button>
                 </div>
-                <n-input
-                  ref="refInputTextString"
-                  v-model:value="inputTextString"
-                  type="textarea"
-                  class="textarea-resize-none text-15"
-                  :style="{
-                    '--n-border-radius': '15px',
-                    '--n-padding-left': '15px',
-                    '--n-padding-right': '20px',
-                    '--n-padding-vertical': '18px',
-                    'width': '80%',
-                    'marginLeft': '10%',
-                    'align': 'center',
-                    'font-family': `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'`,
-                    'font-size': '16px',
-                    'line-height': '1.5',
-                  }"
-                  :placeholder="placeholder"
-                  :autosize="{
-                    minRows: 1,
-                    maxRows: 10,
-                  }"
+                <div
+                  :class="[
+                    'relative b b-solid b-primary bg-white',
+                    'rounded-10px p-12',
+                  ]"
                 >
-                  <template
-                    #prefix
-                  >
-                    <n-dropdown
-                      :options="options"
-                      @select="handleSelect"
-                    >
-                      <n-icon size="30">
-                        <svg
-                          t="1729566080604"
-                          class="icon"
-                          viewBox="0 0 1024 1024"
-                          version="1.1"
-                          xmlns="http://www.w3.org/2000/svg"
-                          p-id="38910"
-                          width="64"
-                          height="64"
-                        >
-                          <path
-                            d="M856.448 606.72v191.744a31.552 31.552 0 0 1-31.488 31.488H194.624a31.552 31.552 0 0 1-31.488-31.488V606.72a31.488 31.488 0 1 1 62.976 0v160.256h567.36V606.72a31.488 31.488 0 1 1 62.976 0zM359.872 381.248c-8.192 0-10.56-5.184-5.376-11.392L500.48 193.152a11.776 11.776 0 0 1 18.752 0l145.856 176.704c5.184 6.272 2.752 11.392-5.376 11.392H359.872z"
-                            fill="#838384"
-                            p-id="38911"
-                          />
-                          <path
-                            d="M540.288 637.248a30.464 30.464 0 1 1-61.056 0V342.656a30.464 30.464 0 1 1 61.056 0v294.592z"
-                            fill="#838384"
-                            p-id="38912"
-                          />
-                        </svg>
-                      </n-icon>
-                    </n-dropdown>
-                    <!-- 隐藏的文件上传按钮 -->
-                    <n-upload
-                      ref="uploadRef"
-                      type="button"
-                      :show-file-list="false"
-                      action="sanic/file/upload_file"
-                      accept=".xlsx,.xls,.csv"
-                      style="display: none"
-                      @finish="finish_upload"
-                    >
-                      选择文件
-                    </n-upload>
-                  </template>
+                  <FileUploadManager
+                    ref="fileUploadRef"
+                    v-model="pendingUploadFileInfoList"
+                  />
 
-                  <template
-                    #suffix
+                  <n-input
+                    ref="refInputTextString"
+                    v-model:value="inputTextString"
+                    type="textarea"
+                    class="textarea-resize-none w-full text-15 [&_.n-input\_\_border]:hidden [&_.n-input\_\_state-border]:hidden [&_.n-input-wrapper]:p-0!"
+                    :style="{
+                      '--n-border-radius': '15px',
+                      'align': 'center',
+                      'font-family': `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'`,
+                      'font-size': '16px',
+                      'line-height': '1.5',
+                    }"
+                    :placeholder="placeholder"
+                    :autosize="{
+                      minRows: 1,
+                      maxRows: 10,
+                    }"
                   >
-                    <n-float-button
-                      position="absolute"
-                      :type="stylizingLoading ? 'primary' : 'default'"
-                      color
-                      right="8px"
-                      :class="[
-                        stylizingLoading && 'opacity-90',
-                        'text-20',
-                      ]"
-                      @click.stop="handleCreateStylized()"
+                    <template
+                      #prefix
                     >
-                      <div
-                        v-if="stylizingLoading"
-                        class="i-svg-spinners:pulse-2 c-#fff"
-                      ></div>
-                      <div
-                        v-else
-                        class="flex items-center justify-center c-#303133/60 i-mingcute:send-fill"
-                      ></div>
-                    </n-float-button>
-                  </template>
-                </n-input>
+                      <n-dropdown
+                        :options="fileUploadRef?.options || []"
+                      >
+                        <div flex="~ items-center justify-center" class="rounded-50% p-7 hover:bg-primary/5 transition-all-300 bg-primary/1" b="~ solid primary/20">
+                          <div class="text-20  i-uil:upload cursor-pointer"></div>
+                        </div>
+                        <!-- <n-icon size="30">
+                          <svg
+                            t="1729566080604"
+                            class="icon"
+                            viewBox="0 0 1024 1024"
+                            version="1.1"
+                            xmlns="http://www.w3.org/2000/svg"
+                            p-id="38910"
+                            width="64"
+                            height="64"
+                          >
+                            <path
+                              d="M856.448 606.72v191.744a31.552 31.552 0 0 1-31.488 31.488H194.624a31.552 31.552 0 0 1-31.488-31.488V606.72a31.488 31.488 0 1 1 62.976 0v160.256h567.36V606.72a31.488 31.488 0 1 1 62.976 0zM359.872 381.248c-8.192 0-10.56-5.184-5.376-11.392L500.48 193.152a11.776 11.776 0 0 1 18.752 0l145.856 176.704c5.184 6.272 2.752 11.392-5.376 11.392H359.872z"
+                              fill="#838384"
+                              p-id="38911"
+                            />
+                            <path
+                              d="M540.288 637.248a30.464 30.464 0 1 1-61.056 0V342.656a30.464 30.464 0 1 1 61.056 0v294.592z"
+                              fill="#838384"
+                              p-id="38912"
+                            />
+                          </svg>
+                        </n-icon> -->
+                      </n-dropdown>
+                    </template>
+                  </n-input>
+
+                  <n-float-button
+                    position="absolute"
+                    :type="stylizingLoading ? 'primary' : 'default'"
+                    color
+                    bottom="10px"
+                    right="8px"
+                    :class="[
+                      stylizingLoading && 'opacity-90',
+                      'text-20',
+                    ]"
+                    @click.stop="handleCreateStylized()"
+                  >
+                    <div
+                      v-if="stylizingLoading"
+                      class="i-svg-spinners:pulse-2 c-#fff text-20"
+                    ></div>
+                    <div
+                      v-else
+                      class="flex items-center justify-center i-mingcute:send-fill text-20 cursor-pointer transition-colors duration-300 hover:c-primary/80"
+                    ></div>
+                  </n-float-button>
+                </div>
               </n-space>
             </div>
           </div>
@@ -1479,7 +1556,7 @@ const backgroundColorVariable = ref('#ffffff')
 /* 隐藏滚动条轨道 */
 
 .scrollable-table-container::-webkit-scrollbar {
-  width: 4.5px; /* 滚动条宽度 */
+  width: 5px; /* 滚动条宽度 */
 }
 
 .scrollable-table-container::-webkit-scrollbar-track {
@@ -1487,7 +1564,69 @@ const backgroundColorVariable = ref('#ffffff')
 }
 
 .scrollable-table-container::-webkit-scrollbar-thumb {
-  background-color: #bfbfbf; /* 滚动条颜色 */
-  border-radius: 3px; /* 滚动条圆角 */
+  background-color: #e8eaf3; /* 滚动条颜色 */
+  border-radius: 4px; /* 滚动条圆角 */
+}
+
+/* 一键到底部按钮样式，底部居中显示 */
+
+.scroll-to-bottom-btn {
+  position: absolute;
+  bottom: 145px; /* 距离底部的距离 */
+  left: 50%;
+  transform: translateX(-50%); /* 水平居中 */
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 4px 15px rgb(0 0 0 / 20%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.3s ease;
+  border: 1px solid #e8eaf3;
+  backdrop-filter: blur(5px);
+}
+
+.scroll-to-bottom-btn:hover {
+  background-color: #f6f7fb;
+  transform: translateX(-50%) scale(1.1); /* 悬停时放大 */
+  box-shadow: 0 6px 20px rgb(0 0 0 / 25%);
+}
+
+.scroll-to-bottom-btn::before {
+  content: "";
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1);
+    opacity: 0.2;
+  }
+
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.upload-wrapper-list {
+  --at-apply: flex flex-wrap gap-10 items-center;
+  --at-apply: pb-12;
 }
 </style>

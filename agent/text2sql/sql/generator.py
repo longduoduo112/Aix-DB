@@ -16,23 +16,28 @@ def sql_generate(state):
 
     prompt = ChatPromptTemplate.from_template(
         """
+        你是一位专业的数据库管理员（DBA），任务是根据提供的数据库结构、表关系以及用户需求，生成优化的MYSQL SQL查询语句，并推荐合适的可视化图表。
+          
+        ## 任务
+          - 根据用户问题生成一条优化的SQL语句。
+          - 根据查询生成逻辑从**图表定义**中选择最合适的图表类型。
+          
+        ## 约束条件
+         1. 你必须仅生成一条合法、可执行的SQL查询语句 —— 不得包含解释、Markdown、注释或额外文本。
+         2. **必须直接且完整地使用所提供的表结构和表关系来生成SQL语句**。
+         3. 你必须严格遵守数据类型、外键关系及表结构中定义的约束。
+         4. 使用适当的SQL子句（JOIN、WHERE、GROUP BY、HAVING、ORDER BY、LIMIT等）以确保准确性和性能。
+         5. 若问题涉及时序，请合理使用提供的“当前时间”上下文（例如用于相对日期计算）。
+         6. 不得假设表结构中未明确定义的列或表。
+         7. 如果用户问题模糊或者缺乏足够的信息以生成正确的查询，请返回：`NULL`
         
-        You are a helpful data analyst who is great at thinking deeply and reasoning about the user's question and the database schema, and you provide a step-by-step reasoning plan in order to answer the user's question.
-
-        ## DATABASE SCHEMA
-        {db_schema}
-
-        ## QUESTION
-        User's Question: {user_query}
-        Current Time: {current_time}
-
-        Your task:
-        - Generate an optimized SQL query that directly answers the user's question.
-        - The SQL query must be fully formed, valid, and executable.
-        - Do NOT include any explanations, markdown formatting, or comments.
-        - Select the right chart based on the sql_generation_reasoning
-        
-        ### Chart definition
+       ## 提供的信息
+        - 表结构：{db_schema}
+        - 表关系：{table_relationship}
+        - 用户提问：{user_query}
+        - 当前时间：{current_time}
+             
+        ## 图表定义
         - generate_area_chart: used to display the trend of data under a continuous independent variable, allowing observation of overall data trends.
         - generate_bar_chart: used to compare values across different categories, suitable for horizontal comparisons.
         - generate_boxplot_chart: used to display the distribution of data, including the median, quartiles, and outliers.
@@ -60,11 +65,12 @@ def sql_generate(state):
         - generate_word_cloud_chart: Generate a word-cloud, used to display the frequency of words in textual data, with font sizes indicating the frequency of each word.
         - generate_table: Generate a structured table, used to organize and present data in rows and columns, facilitating clear and concise information display for easy reading and analysis.
         
-        ### RESPONSE FORMAT (strict JSON) ###
-        Respond only in the following JSON format:
+        ## 输出格式
+        - 你**必须且只能**输出一个符合以下结构的 **纯 JSON 对象**，不得包含任何额外文本、注释、换行或 Markdown 格式：
+        ```json
         {{
-            "sql_query": "Generated SQL query here",
-            "chart_type": "Generated chart_type here"
+            "sql_query": "生成的SQL语句字符串",
+            "chart_type": "推荐的图表类型字符串，如 \"generate_area_chart\""
         }}
     """
     )
@@ -76,8 +82,8 @@ def sql_generate(state):
             {
                 "db_schema": state["db_info"],
                 "user_query": state["user_query"],
+                "table_relationship": state.get("table_relationship", []),
                 "current_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                # "sql_generation_reasoning": state["sql_reasoning"],
             }
         )
 

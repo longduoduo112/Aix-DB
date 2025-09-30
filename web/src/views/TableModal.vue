@@ -148,6 +148,7 @@ const tableRef = useTemplateRef('tableRef')
             '--n-td-color': `#ffffff`,
             'font-family': `-apple-system, BlinkMacSystemFont,'Segoe UI', Roboto, 'Helvetica Neue', Arial,sans-serif`,
           }"
+          @update:checked-row-keys="handleCheck"
         >
           <template #bodyCell="{ column, row }">
             <td :key="column.key">{{ row[column.key] }}</td>

@@ -26,7 +26,7 @@ async def data_render_ant(state: AgentState):
         }
     )
 
-    # 过滤工具减少token和大模型幻觉问题
+    # 获取上一个步骤目标工具 过滤工具集减少token和大模型幻觉问题
     chart_type = state["chart_type"]
     tools = await client.get_tools()
     tools = [tool for tool in tools if tool.name == chart_type]

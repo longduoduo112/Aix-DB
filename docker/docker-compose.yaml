@@ -3,7 +3,7 @@ version: '3.8'
 services:
   chat-web:
 #    image: apconw/chat-vue3-mvp:1.1.5
-    image: crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/chat-vue3-mvp:1.1.7
+    image: crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/chat-vue3-mvp:1.1.8
     container_name: chat-vue3-mvp
     environment:
       - TZ=Asia/Shanghai
@@ -31,7 +31,7 @@ services:
 
   chat-service:
 #    image: apconw/sanic-web:1.1.5
-    image: crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/sanic-web:1.1.7
+    image: crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/sanic-web:1.1.8
     container_name: sanic-web
     environment:
       - MYSQL_HOST=host.docker.internal
@@ -51,6 +51,10 @@ services:
       - MODEL_API_KEY=sk-xxxx
       - MCP_HUB_COMMON_QA_GROUP_URL=http://host.docker.internal:3300/mcp/fa7646b4-1679-4d1d-9bda-3e9190cfef1a
       - MCP_HUB_DATABASE_QA_GROUP_URL=http://host.docker.internal:3300/mcp/f635fd21-2f44-4a99-8a92-f778b4d3607f
+      - SHOW_THINKING_PROCESS=true
+      - NEO4J_URI=bolt://localhost:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=neo4j123
       - TZ=Asia/Shanghai
     ports:
       - "8088:8088"
@@ -98,16 +102,17 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-#  neo4j-apoc:
-#    image: neo4j:5.26.11-ubi9
-#    container_name: neo4j-apoc
-#    ports:
-#      - "7474:7474"
-#      - "7687:7687"
-#    volumes:
-#      - ./volume/neo4j/data:/data
-#      - ./volume/neo4j/plugins:/plugins
-#    environment:
-#      - apoc.export.file.enabled=true
-#      - apoc.import.file.enabled=true
-#      - apoc.import.file.use_neo4j_config=true
+  neo4j-apoc:
+    image: neo4j:5.26.11-ubi9
+    container_name: neo4j-apoc
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - ./volume/neo4j/data:/data
+      - ./volume/neo4j/plugins:/plugins
+    environment:
+      - apoc.export.file.enabled=true
+      - apoc.import.file.enabled=true
+      - apoc.import.file.use_neo4j_config=true
+      - NEO4J_AUTH=neo4j/neo4j123

@@ -53,6 +53,7 @@ class AgentState(TypedDict):
     user_query: str  # 用户问题
     sql_reasoning: Optional[str]  # SQL 推理过程
     db_info: Optional[Dict]  # 数据库信息
+    table_relationship: Optional[List[Dict[str, Any]]]  # 表关系
     generated_sql: Optional[str]  # 生成的 SQL
     execution_result: Optional[ExecutionResult]  # SQL 执行结果
     validation_result: Optional[ValidationResult]  # SQL 验证结果

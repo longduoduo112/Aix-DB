@@ -5,8 +5,12 @@ import * as TransformUtils from '@/components/MarkdownPreview/transform'
 export interface BusinessState {
   writerList: any
   qa_type: any
-  file_url: any,
   task_id: any
+  file_list: {
+    source_file_key: string
+    parse_file_key: string
+    file_size: string
+  }[]
 }
 
 export const useBusinessStore = defineStore('business-store', {
@@ -16,7 +20,7 @@ export const useBusinessStore = defineStore('business-store', {
       // 全局报错问答类型
       qa_type: 'COMMON_QA',
       // 全局保存文件问答地址
-      file_url: '',
+      file_list: [],
       // 全局保存dify 任务id
       task_id: '',
     }
@@ -28,11 +32,23 @@ export const useBusinessStore = defineStore('business-store', {
     update_qa_type(qa_type) {
       this.qa_type = qa_type
     },
-    /**
-     * 更新文件url
-     */
-    update_file_url(file_url) {
-      this.file_url = file_url
+    // 添加单个文件url到数组
+    add_file(file_url: any) {
+      this.file_list.push(file_url)
+    },
+
+    // 清空文件url数组
+    clear_file_list() {
+      this.file_list = []
+    },
+    // 删除单个文件url
+    remove_file(source_file_key: string) {
+      const index = this.file_list.findIndex(
+        (file) => file.source_file_key === source_file_key,
+      )
+      if (index !== -1) {
+        this.file_list.splice(index, 1)
+      }
     },
     update_writerList(writerList) {
       this.writerList = writerList
@@ -61,6 +77,7 @@ export const useBusinessStore = defineStore('business-store', {
       }> {
       return new Promise((resolve) => {
         const query_str = data.text
+        const file_list = data.file_list
         const processResponse = (res) => {
           if (res.status === 401) {
             // 登录失效
@@ -141,7 +158,7 @@ export const useBusinessStore = defineStore('business-store', {
         }
 
         // 调用后端接口拿大模型结果
-        GlobalAPI.createOllama3Stylized(query_str, this.qa_type, uuid,chat_id)
+        GlobalAPI.createOllama3Stylized(query_str, this.qa_type, uuid, chat_id, file_list)
           .then((res) => resolve(processResponse(res)))
           .catch((err) => {
             console.error('Request failed:', err)
