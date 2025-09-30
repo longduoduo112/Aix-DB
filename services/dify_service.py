@@ -107,7 +107,7 @@ class DiFyRequest:
                     dify_service_url,
                     headers=headers,
                     json=body_params,
-                    timeout=aiohttp.ClientTimeout(total=60 * 2),  # 等待2分钟超时
+                    timeout=aiohttp.ClientTimeout(total=60 * 10),  # 等待10分钟超时
                 ) as response:
                     logging.info(f"dify response status: {response.status}")
                     if response.status == 200:

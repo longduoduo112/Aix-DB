@@ -173,3 +173,17 @@ npx -y 12306-mcp
 
 - 获取访问链接
 ![image](images/12306-group-url.png)
+
+
+### 🌿 Noe4j
+> Noe4j是一个开源的图数据库，用于存储和查询关系数据。
+> Noe4j的安装和配置请参考[官方文档](https://neo4j.com/docs/operations-manual/current/installation/)
+#### 启动
+```angular2html
+cd docker
+docker compose up -d neo4j-apoc
+```
+#### 配置
+- 登录http://localhost:7474/browser/ neo4j/neo4j123
+
+![image](images/eno4j-db.png)

@@ -14,6 +14,12 @@ export async function createOllama3Stylized(text, qa_type, uuid, chat_id, file_l
     url.searchParams.append(key, params[key])
   })
 
+  // 创建 AbortController 用于超时控制
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => {
+    controller.abort()
+  }, 10 * 60 * 1000) // 10分钟超时 (10 * 60 * 1000 毫秒)
+
   // // 文件问答传文件url
   // if (text.includes('表格数据')) {
   //   text = `${businessStore.$state.file_url}|${text}`
@@ -36,8 +42,12 @@ export async function createOllama3Stylized(text, qa_type, uuid, chat_id, file_l
       chat_id,
       file_list,
     }),
+    signal: controller.signal, // 添加超时信号
   })
-  return fetch(req)
+
+  return fetch(req).finally(() => {
+    clearTimeout(timeoutId) // 清除超时定时器
+  })
 }
 
 /**

@@ -7,10 +7,10 @@
 
 **已集成MCP多智能体架构**
 
-基于 **Dify 、LangChain/LangGraph、Lamaindex、MCP、Ollama&Vllm、Sanic 和 Text2SQL** 📊 等技术构建的一站式大模型应用开发项目，采用 
+基于 **Dify 、LangChain/LangGraph、llamaIndex、Noe4j、MCP、Ollama&Vllm、Sanic 和 Text2SQL** 📊 等技术构建的一站式大模型应用开发项目，采用 
 **Vue3、TypeScript** 和 
 **Vite 5** 
-打造现代UI。它支持通过 **ECharts** 📈 / **AntV**
+打造现代UI。它支持通过 **ECharts** 📈 / **AntV((mcp-server-chart)**
 实现基于大模型的数据图形化问答，具备处理 **CSV** 文件 📂 表格问答的能力。同时，能方便对接第三方开源 **RAG** 系统 检索系统 🌐等，以支持广泛的通用知识问答。
 
 作为轻量级的大模型应用开发项目，**Sanic-Web** 🛠️ 支持快速迭代与扩展，助力大模型项目快速落地。🚀
@@ -23,7 +23,7 @@
 ## 🎉 **特性**
 - **多智能体**: 支持多模型、多智能体+MCP协同任务
 - **大模型交互**: 全面支持主流大模型交互框架，如 Dify 与 LangChain
-- **核心技术栈**：Dify + Ollama + RAG + (Qwen3/DeepSeek) + Text2SQL + MCP + LangGraph
+- **核心技术栈**：Dify + Ollama + RAG + (Qwen3/DeepSeek) + Text2SQL + MCP + Neo4J + LangGraph
 - **UI 框架**： Vue 3 + TypeScript + Vite 5
 - **数据问答**：集成 ECharts/AntV大模型实现Text2SQL轻量级的图形化数据问答展示
 - **表格问答**：支持 CSV格式文件的上传与基于大模型总结预处理和Text2SQL的表格数据问答
@@ -63,14 +63,14 @@
 </tr>
 <tr>
 <td>
-<video src="https://github.com/user-attachments/assets/c131e34f-5401-4ae8-a5a6-6531e696e753" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:640px; min-height: 200px">
+<video src="https://github.com/user-attachments/assets/8dad64a6-8eee-4d68-a0f4-f30e92f52594" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:640px; min-height: 200px">
 </video>
 </td>
 <td>
 
 <video src="https://github.com/user-attachments/assets/228d5710-12d8-4ae4-bad1-65135813745f" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:640px; min-height: 200px">
 </video>
-  
+
 </td>
 </tr>
 </tbody>
