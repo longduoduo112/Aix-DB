@@ -1,29 +1,24 @@
 import os
+
 from sanic import Sanic
-from sanic.response import json
-from config.load_env import load_env
+from sanic.response import empty
+
 import controllers
 from common.route_utility import autodiscover
+from config.load_env import load_env
+
+# 加载配置文件
+load_env()
+
+app = Sanic("sanic-web")
+autodiscover(
+    app,
+    controllers,
+    recursive=True,
+)
 
 
-def create_app() -> Sanic:
-    """创建并配置 Sanic 应用实例"""
-    app = Sanic("sanic-web")
-
-    # 自动发现并注册路由
-    autodiscover(app, controllers, recursive=True)
-
-    # 注册根路径路由
-    @app.route("/")
-    async def index(request):
-        return json({"message": "Welcome to sanic-web API"})
-
-    return app
-
-
-def load_configuration():
-    """加载环境配置"""
-    load_env()
+app.route("/")(lambda _: empty())
 
 
 def get_server_config():
@@ -35,14 +30,6 @@ def get_server_config():
     }
 
 
-def main():
-    """应用入口点"""
-    load_configuration()
-    app = create_app()
-    config = get_server_config()
-
-    app.run(**config)
-
-
 if __name__ == "__main__":
-    main()
+    config = get_server_config()
+    app.run(**config)
