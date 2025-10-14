@@ -21,18 +21,18 @@
 - 模型要求: **目前只支持Qwen系列模型**
 
 
-### 🧩 **Clone仓库**
+### **1. Clone仓库**
 ```angular2html
 git clone https://github.com/apconw/sanic-web.git
 ```
 
-### **第一步、执行部署脚本**
+### **2. 执行部署脚本**
 ```angular2html
 cd docker
 ./deploy.sh
 ```
 
-### **第二步、中间件配置**
+### **3. 中间件配置**
 #### 🌲 Mino
 > 下面chat-service/gpt-vis-api服务都依赖Minio服务
 
