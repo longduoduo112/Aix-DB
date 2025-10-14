@@ -82,7 +82,6 @@ services:
       - "3300:3000"
     volumes:
       - ./volume/mcp-data/mcp_settings.json:/app/mcp_settings.json
-      - ./volume/mcp-data/data:/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

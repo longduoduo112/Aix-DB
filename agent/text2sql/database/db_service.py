@@ -42,6 +42,11 @@ os.makedirs(VECTOR_INDEX_DIR, exist_ok=True)
 INDEX_FILE = os.path.join(VECTOR_INDEX_DIR, "schema.index")
 METADATA_FILE = os.path.join(VECTOR_INDEX_DIR, "metadata.json")
 
+# 重排模型
+RERANK_MODEL_NAME = os.getenv("RERANK_MODEL_NAME")
+#  嵌入模型
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME")
+
 # 初始化 DashScope 客户端
 if USE_DASHSCOPE_EMBEDDING:
     MODEL_API_KEY = os.getenv("MODEL_API_KEY")
@@ -278,7 +283,7 @@ class DatabaseService:
         embeddings = []
         for doc in texts:
             try:
-                response = client.embeddings.create(model="text-embedding-v4", input=doc)
+                response = client.embeddings.create(model=EMBEDDING_MODEL_NAME, input=doc)
                 embeddings.append(response.data[0].embedding)
             except Exception as e:
                 logger.error(f"❌ 嵌入生成失败 ({doc[:30]}...): {e}")
@@ -352,7 +357,7 @@ class DatabaseService:
                        按照相似度从高到低排序
         """
         try:
-            response = client.embeddings.create(model="text-embedding-v4", input=query)
+            response = client.embeddings.create(model=EMBEDDING_MODEL_NAME, input=query)
             query_vec = np.array([response.data[0].embedding]).astype("float32")
             faiss.normalize_L2(query_vec)
             _, indices = self._faiss_index.search(query_vec, top_k)
@@ -448,7 +453,7 @@ class DatabaseService:
             logger.info("🔁 调用 GTE-Rerank-V2 进行重排序...")
             response = dashscope.TextReRank.call(
                 api_key=MODEL_API_KEY,
-                model="gte-rerank-v2",
+                model=RERANK_MODEL_NAME,
                 query=query,
                 documents=documents,
                 top_n=len(documents),

@@ -286,6 +286,12 @@ const checkAllFilesUploaded = () => {
 
 // 提交对话
 const handleCreateStylized = async (send_text = '', file_key = []) => {
+  if (qa_type.value === 'REPORT_QA') {
+    window.$ModalMessage.warning('深度搜索功能暂不支持，功能正在开发中..')
+    inputTextString.value = ''
+    return
+  }
+
   // 设置背景颜色
   backgroundColorVariable.value = '#f6f7fb'
 

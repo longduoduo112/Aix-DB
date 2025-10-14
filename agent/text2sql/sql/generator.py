@@ -5,7 +5,7 @@ from langchain.prompts import ChatPromptTemplate
 from datetime import datetime
 import logging
 
-from agent.text2sql.analysis.llm_util import get_llm
+from common.llm_util import get_llm
 
 logger = logging.getLogger(__name__)
 
