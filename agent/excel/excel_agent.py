@@ -10,7 +10,7 @@ from langgraph.graph.state import CompiledStateGraph
 from agent.excel.excel_agent_state import ExcelAgentState
 from agent.excel.excel_graph import create_excel_graph
 from constants.code_enum import DataTypeEnum
-from services.user_service import decode_jwt_token, add_user_record
+from services.user_service import decode_jwt_token, add_user_record, query_user_qa_record
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,11 @@ class ExcelAgent:
         t04_answer_data = {}
         current_step = None
 
+        # 实现上传一次多次对话的效果 默认单轮对话取最新上传的文件
+        if file_list is None:
+            user_qa_record = query_user_qa_record(chat_id)[0]
+            if user_qa_record:
+                file_list = json.loads(user_qa_record["file_key"])
         try:
             initial_state = ExcelAgentState(
                 user_query=query,
@@ -109,9 +114,9 @@ class ExcelAgent:
                     query,
                     t02_answer_data,
                     t04_answer_data,
-                    "FILEDATA_QA",  # 使用适当的枚举值或字符串标识excel问答类型
+                    "FILEDATA_QA",
                     user_token,
-                    {},
+                    file_list,
                 )
 
         except asyncio.CancelledError:
@@ -176,7 +181,7 @@ class ExcelAgent:
         处理各个步骤的内容
         """
         content_map = {
-            "excel_parsing": lambda: "文件解析成功",
+            "excel_parsing": lambda: self._format_table_columns_info(step_value),
             "sql_generator": lambda: step_value["generated_sql"],
             "sql_executor": lambda: "执行sql语句成功" if step_value["execution_result"].success else "执行sql语句失败",
             "summarize": lambda: step_value.get("report_summary", ""),
@@ -259,3 +264,28 @@ class ExcelAgent:
             self.running_tasks[task_id]["cancelled"] = True
             return True
         return False
+
+    @staticmethod
+    def _format_table_columns_info(db_info: Dict[str, Any]) -> str:
+        """
+        格式化表格列信息为HTML details标签格式
+        :param db_info: 数据库信息字典
+        :return: 格式化后的HTML字符串
+        """
+        db_info = db_info["db_info"]
+        if not db_info or "columns" not in db_info:
+            return ""
+
+        columns_info = db_info["columns"]
+
+        html_content = """
+        <ul>
+        """
+        for column_name, column_details in columns_info.items():
+            comment = column_details.get("comment", column_name)
+            type_ = column_details.get("type", "未知")
+            html_content += f"<li><strong>{column_name}</strong>: {comment} (类型: {type_})</li>\n"
+
+        html_content += """</ul>"""
+
+        return html_content
