@@ -7,6 +7,7 @@ import traceback
 import aiohttp
 import requests
 
+from agent.claude_sdk_agent import ClaudeSDKAgent
 from agent.common_react_agent import CommonReactAgent
 from agent.deepagent.deep_research_agent import DeepAgent
 from agent.excel.excel_agent import ExcelAgent
@@ -34,7 +35,8 @@ class QaContext:
         self.chat_id = chat_id
 
 
-common_agent = CommonReactAgent()
+# common_agent = CommonReactAgent()
+common_agent = ClaudeSDKAgent()
 sql_agent = Text2SqlAgent()
 excel_agent = ExcelAgent()
 deep_agent = DeepAgent()
