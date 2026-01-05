@@ -38,7 +38,7 @@ class DBConnectionPool:
                 return
 
             # 获取数据库连接URI，如果环境变量不存在则使用默认值
-            database_uri = os.getenv("SQLALCHEMY_DATABASE_URI", "mysql+pymysql://root:1@127.0.0.1:13006/chat_db")
+            database_uri = os.getenv("SQLALCHEMY_DATABASE_URI", "postgresql+psycopg2://aix_db:1@127.0.0.1:5432/aix_db")
 
             self.engine = create_engine(
                 database_uri,

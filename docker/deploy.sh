@@ -158,7 +158,7 @@ fi
 
 # 4. 安装Python依赖
 log_info "🐍 安装Python依赖..."
-if ! pip3 install pymysql py2neo; then
+if ! pip3 install psycopg2-binary py2neo; then
     log_error "Python依赖安装失败"
 fi
 
@@ -187,24 +187,24 @@ wait_for_container() {
     return 1
 }
 
-# 检查MySQL服务是否真正可用
-check_mysql_ready() {
+# 检查PostgreSQL服务是否真正可用
+check_postgres_ready() {
     local max_attempts=30
     local attempt=1
 
-    log_info "⏳ 等待 MySQL 服务准备就绪..."
+    log_info "⏳ 等待 PostgreSQL 服务准备就绪..."
 
     while [ $attempt -le $max_attempts ]; do
-        if docker exec mysql-db mysqladmin ping --silent >/dev/null 2>&1; then
-            log_info "✅ MySQL 服务已准备就绪"
+        if docker exec postgres-db pg_isready -U postgres >/dev/null 2>&1; then
+            log_info "✅ PostgreSQL 服务已准备就绪"
             return 0
         fi
-        log_info "⏳ MySQL 尚未准备就绪，第 $attempt/$max_attempts 次尝试..."
+        log_info "⏳ PostgreSQL 尚未准备就绪，第 $attempt/$max_attempts 次尝试..."
         attempt=$((attempt + 1))
         sleep 5
     done
 
-    log_error "MySQL 服务准备超时"
+    log_error "PostgreSQL 服务准备超时"
     return 1
 }
 
@@ -285,23 +285,23 @@ check_port_available() {
     return 1
 }
 
-# 等待MySQL和Neo4j服务启动，并检查MySQL是否真正可用以及端口是否开放
-container_mysql_ok=true
+# 等待PostgreSQL和Neo4j服务启动，并检查PostgreSQL是否真正可用以及端口是否开放
+container_postgres_ok=true
 container_neo4j_ok=true
-mysql_ready_ok=true
+postgres_ready_ok=true
 neo4j_ready_ok=true
-port_mysql_ok=true
+port_postgres_ok=true
 port_neo4j_ok=true
 
-wait_for_container "mysql-db" || container_mysql_ok=false
+wait_for_container "postgres-db" || container_postgres_ok=false
 wait_for_container "neo4j-apoc" || container_neo4j_ok=false
-check_mysql_ready || mysql_ready_ok=false
+check_postgres_ready || postgres_ready_ok=false
 check_neo4j_ready || neo4j_ready_ok=false
-check_port_available "MySQL" 13006 || port_mysql_ok=false
+check_port_available "PostgreSQL" 5432 || port_postgres_ok=false
 check_port_available "Neo4j" 7687 || port_neo4j_ok=false
 
 # 6. 执行数据初始化脚本
-if $container_mysql_ok && $container_neo4j_ok && $mysql_ready_ok && $neo4j_ready_ok && $port_mysql_ok && $port_neo4j_ok; then
+if $container_postgres_ok && $container_neo4j_ok && $postgres_ready_ok && $neo4j_ready_ok && $port_postgres_ok && $port_neo4j_ok; then
     log_info "📊 等待服务稳定 (10秒)..."
     sleep 10  # 服务已就绪，只需短暂等待确保稳定
 
@@ -332,10 +332,10 @@ if $container_mysql_ok && $container_neo4j_ok && $mysql_ready_ok && $neo4j_ready
 else
     log_error "服务启动失败，无法执行数据初始化"
     log_info "各服务状态:"
-    log_info "- MySQL容器启动: $container_mysql_ok"
+    log_info "- PostgreSQL容器启动: $container_postgres_ok"
     log_info "- Neo4j容器启动: $container_neo4j_ok"
-    log_info "- MySQL服务就绪: $mysql_ready_ok"
+    log_info "- PostgreSQL服务就绪: $postgres_ready_ok"
     log_info "- Neo4j Bolt服务就绪: $neo4j_ready_ok"
-    log_info "- MySQL端口可用: $port_mysql_ok"
+    log_info "- PostgreSQL端口可用: $port_postgres_ok"
     log_info "- Neo4j端口可用: $port_neo4j_ok"
 fi

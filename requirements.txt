@@ -1,7 +1,6 @@
 aiofiles==25.1.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.2
-aiomysql==0.2.0
 aiosignal==1.4.0
 annotated-types==0.7.0
 anthropic==0.72.0
@@ -157,7 +156,6 @@ pyjwt==2.10.1
 pymdown-extensions==10.16.1
 pymupdf==1.26.6
 pymupdf4llm==0.1.9
-pymysql==1.1.2
 pyparsing==3.2.5
 pypdfium2==5.0.0
 pypika==0.48.9

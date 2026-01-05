@@ -199,7 +199,7 @@ if ($HasPython) {
 
 if ($HasPip) {
     Write-Log "安装Python依赖..."
-    & pip install pymysql py2neo
+    & pip install psycopg2-binary py2neo
     if ($LASTEXITCODE -ne 0) {
         Write-Log "Python依赖安装失败" -Level Error
     }
@@ -227,25 +227,25 @@ function Wait-Container {
     return $false
 }
 
-function Test-MySqlReady {
+function Test-PostgresReady {
     param([int]$MaxAttempts = 30)
-    Write-Log "等待 MySQL 服务准备就绪..."
+    Write-Log "等待 PostgreSQL 服务准备就绪..."
     $attempt = 1
     while ($attempt -le $MaxAttempts) {
         try {
-            $result = docker exec mysql-db mysqladmin ping --silent 2>&1
+            $result = docker exec postgres-db pg_isready -U postgres 2>&1
             if ($LASTEXITCODE -eq 0) {
-                Write-Log "MySQL 服务已准备就绪"
+                Write-Log "PostgreSQL 服务已准备就绪"
                 return $true
             }
         } catch {
             # 忽略错误，继续重试
         }
-        Write-Log "MySQL 尚未准备就绪，第 $attempt/$MaxAttempts 次尝试..."
+        Write-Log "PostgreSQL 尚未准备就绪，第 $attempt/$MaxAttempts 次尝试..."
         Start-Sleep -Seconds 5
         $attempt++
     }
-    Write-Log "MySQL 服务准备超时" -Level Error
+    Write-Log "PostgreSQL 服务准备超时" -Level Error
     return $false
 }
 
@@ -386,16 +386,16 @@ except Exception as e:
     return $false
 }
 
-$container_mysql_ok = Wait-Container "mysql-db"
+$container_postgres_ok = Wait-Container "postgres-db"
 $container_neo4j_ok = Wait-Container "neo4j-apoc"
-$mysql_ready_ok = Test-MySqlReady
+$postgres_ready_ok = Test-PostgresReady
 $neo4j_ready_ok = Test-Neo4jReady
-$port_mysql_ok = Test-PortOpen "MySQL" 13006
+$port_postgres_ok = Test-PortOpen "PostgreSQL" 5432
 $port_neo4j_ok = Test-PortOpen "Neo4j" 7687
 
 # === 内嵌 init_data.sh 的逻辑（不再调用外部脚本）===
 
-if ($container_mysql_ok -and $container_neo4j_ok -and $mysql_ready_ok -and $neo4j_ready_ok -and $port_mysql_ok -and $port_neo4j_ok) {
+if ($container_postgres_ok -and $container_neo4j_ok -and $postgres_ready_ok -and $neo4j_ready_ok -and $port_postgres_ok -and $port_neo4j_ok) {
     Write-Log "等待服务稳定 (10秒)..."
     Start-Sleep -Seconds 10
 
@@ -409,27 +409,27 @@ if ($container_mysql_ok -and $container_neo4j_ok -and $mysql_ready_ok -and $neo4
     # 获取项目根目录（脚本目录的父目录）
     $ProjectRoot = Split-Path -Parent $ScriptDir
     
-    # 执行 initialize_mysql.py（使用绝对路径）
-    $MysqlScript = Join-Path $ProjectRoot "common\initialize_mysql.py"
-    if (Test-Path -LiteralPath $MysqlScript) {
-        Write-Log "执行 MySQL 初始化脚本..."
+    # 执行 initialize_postgres.py（使用绝对路径）
+    $PostgresScript = Join-Path $ProjectRoot "common\initialize_postgres.py"
+    if (Test-Path -LiteralPath $PostgresScript) {
+        Write-Log "执行 PostgreSQL 初始化脚本..."
         try {
             # 切换到项目根目录执行，确保相对路径正确
             Push-Location $ProjectRoot
-            & python $MysqlScript
-            $mysqlExitCode = $LASTEXITCODE
+            & python $PostgresScript
+            $postgresExitCode = $LASTEXITCODE
             Pop-Location
-            if ($mysqlExitCode -ne 0) {
-                Write-Log "MySQL 初始化失败，退出代码: $mysqlExitCode" -Level Error
+            if ($postgresExitCode -ne 0) {
+                Write-Log "PostgreSQL 初始化失败，退出代码: $postgresExitCode" -Level Error
                 exit 1
             }
         } catch {
             Pop-Location
-            Write-Log "MySQL 初始化异常: $_" -Level Error
+            Write-Log "PostgreSQL 初始化异常: $_" -Level Error
             exit 1
         }
     } else {
-        Write-Log "MySQL 初始化脚本未找到: $MysqlScript" -Level Error
+        Write-Log "PostgreSQL 初始化脚本未找到: $PostgresScript" -Level Error
         exit 1
     }
 
@@ -493,11 +493,11 @@ if ($container_mysql_ok -and $container_neo4j_ok -and $mysql_ready_ok -and $neo4
 } else {
     Write-Log "服务启动失败，无法执行数据初始化" -Level Error
     Write-Log "各服务状态:"
-    Write-Log "- MySQL容器启动: $container_mysql_ok"
+    Write-Log "- PostgreSQL容器启动: $container_postgres_ok"
     Write-Log "- Neo4j容器启动: $container_neo4j_ok"
-    Write-Log "- MySQL服务就绪: $mysql_ready_ok"
+    Write-Log "- PostgreSQL服务就绪: $postgres_ready_ok"
     Write-Log "- Neo4j Bolt服务就绪: $neo4j_ready_ok"
-    Write-Log "- MySQL端口可用: $port_mysql_ok"
+    Write-Log "- PostgreSQL端口可用: $port_postgres_ok"
     Write-Log "- Neo4j端口可用: $port_neo4j_ok"
     exit 1
 }
