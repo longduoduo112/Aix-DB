@@ -131,6 +131,21 @@ const avatarMenuOptions = [
     icon: () => <div class="i-material-symbols:database-outline text-16"></div>,
   },
   {
+    label: '用户管理',
+    key: 'userManager',
+    icon: () => <div class="i-material-symbols:person-outline text-16"></div>,
+  },
+  {
+    label: '知识库管理',
+    key: 'knowledgeManager',
+    icon: () => <div class="i-material-symbols:library-books-outline text-16"></div>,
+  },
+  {
+    label: '大模型配置',
+    key: 'llmConfig',
+    icon: () => <div class="i-material-symbols:settings-outline text-16"></div>,
+  },
+  {
     label: '退出登录',
     key: 'logout',
     icon: () => <div class="i-material-symbols:logout text-16"></div>,
@@ -143,6 +158,21 @@ const handleMenuSelect = (key: string) => {
     case 'dataSource':
       router.push({
         name: 'DatasourceManager',
+      })
+      break
+    case 'userManager':
+      router.push({
+        name: 'UserManager',
+      })
+      break
+    case 'knowledgeManager':
+      router.push({
+        name: 'KnowledgeManager',
+      })
+      break
+    case 'llmConfig':
+      router.push({
+        name: 'LLMConfig',
       })
       break
     case 'logout':

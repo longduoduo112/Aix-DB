@@ -22,7 +22,6 @@ setTimeout(() => {
         flex="~"
         size-full
         overflow-hidden
-        class="panel-shadow"
       >
         <n-spin
           w-full
@@ -50,13 +49,9 @@ setTimeout(() => {
             min-w-0
             h-full
             overflow-hidden
-            py-10
-            pr-10
-            style="background: linear-gradient(to bottom, #6754ff, #8478ff)"
           >
             <div
               size-full
-              rounded-10
               overflow-hidden
             >
               <LayoutDefault />

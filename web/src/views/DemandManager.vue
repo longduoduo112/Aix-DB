@@ -409,8 +409,6 @@ form-item-inline {
   padding-top: 10px;
   background-color: #fff; /* 黑色背景 */
   color: #26244c;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
 }
 
 /* 当鼠标悬停时改变overflow-y属性 */

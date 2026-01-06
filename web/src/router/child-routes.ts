@@ -16,30 +16,6 @@ const childrenRoutes: Array<RouteRecordRaw> = [
       },
     ],
   },
-  // {
-  //   path: 'testAssitant',
-  //   name: 'TestAssitant',
-  //   component: () => import('@/views/DemandManager.vue'),
-  //   meta: { requiresAuth: true }, // 标记需要认证
-  // },
-  {
-    path: 'uaDetail/:id',
-    name: 'UaDetail',
-    component: () => import('@/views/usassistant/UsDetail.vue'),
-    meta: { requiresAuth: true },
-  },
-  // {
-  //     path: '/testAssitant',
-  //     name: 'TestAssitant',
-  //     component: () => import('@/views/TestAssistant.vue'),
-  //     meta: { requiresAuth: true } // 标记需要认证
-  // },
-  {
-    path: 'mcpChat',
-    name: 'McpChat',
-    component: () => import('@/views/mcp/MCPClient.vue'),
-    meta: { requiresAuth: true }, // 标记需要认证
-  },
   {
     path: 'datasource',
     name: 'DatasourceManager',
@@ -51,6 +27,24 @@ const childrenRoutes: Array<RouteRecordRaw> = [
     name: 'DatasourceTableList',
     component: () => import('@/views/DatasourceTableList.vue'),
     meta: { requiresAuth: true }, // 标记需要认证
+  },
+  {
+    path: 'user-manager',
+    name: 'UserManager',
+    component: () => import('@/views/UserManager.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'knowledge-manager',
+    name: 'KnowledgeManager',
+    component: () => import('@/views/KnowledgeManager.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'llm-config',
+    name: 'LLMConfig',
+    component: () => import('@/views/LLMConfig.vue'),
+    meta: { requiresAuth: true },
   },
 ]
 

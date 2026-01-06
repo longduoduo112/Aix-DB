@@ -1,150 +1,195 @@
-<script setup>
-import { h } from 'vue'
+<script lang="ts" setup>
+import { useDebounceFn, useInfiniteScroll } from '@vueuse/core'
+import { useDialog, useMessage } from 'naive-ui'
+import { computed, ref, watch } from 'vue'
 import * as GlobalAPI from '@/api'
 
-const props = defineProps({
-  show: Boolean,
-})
+type RowData = {
+  chat_id: string
+  key?: string
+  question?: string
+  create_time?: string
+}
 
-const emit = defineEmits(['update:show', 'delete'])
+interface Props {
+  show: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), { show: false })
+
+const emit = defineEmits<{
+  (e: 'update:show', v: boolean): void
+  (e: 'delete', ids: string[]): void
+}>()
+
+const message = useMessage()
+const dialog = useDialog()
 
 const localShow = ref(props.show)
-const tableData = ref([])
-const columns = ref([
-  {
-    type: 'selection',
-  },
-  {
-    title: '用户问题',
-    key: 'question',
-    ellipsis: true,
-    render(row) {
-      const questionText = row.question || row.key || '无标题'
-      return h('div', { class: 'flex items-center gap-2' }, [
-        h('div', { class: 'i-hugeicons:comment-01 text-20 text-indigo-500' }),
-        h('span', {
-          style: {
-            fontSize: '15px',
-            fontWeight: '500',
-            color: 'red', // gray-700
-            lineHeight: '1.4',
-            wordBreak: 'break-word',
-          },
-        }, questionText),
-      ])
-    },
-  },
-  {
-    title: '创建时间',
-    key: 'create_time',
-    width: 200, // Increased width
-    render(row) {
-      // Fallback for create_time if it's missing or named differently
-      const timeText = row.create_time || '刚刚'
-      return h('div', { class: 'flex items-center gap-2 text-gray-500' }, [
-        h('div', { class: 'i-hugeicons:time-01 text-16' }), // Increased icon size
-        h('span', { class: 'text-14' }, timeText), // Increased text size
-      ])
-    },
-  },
-])
+const listData = ref<RowData[]>([])
 const loading = ref(false)
-const checkedRowKeys = ref([])
+const checked = ref<Set<string>>(new Set())
+const searchText = ref('')
+const scrollEl = ref<HTMLElement | null>(null)
 
-// 分页配置
-const pagination = ref({
-  page: 1,
-  pageSize: 8,
-  total: 0, // 总记录数
-  pageCount: 0, // 总页数
-  onChange: (page) => handlePageChange(page),
-  onUpdatePageSize: (pageSize) => handlePageSizeChange(pageSize),
-})
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+const noMore = ref(false)
 
-async function fetchData() {
+const modalTitle = computed(() => `管理对话记录 · 共${total.value}条`)
+const hasSelection = computed(() => checked.value.size > 0)
+
+watch(
+  () => props.show,
+  (v) => {
+    localShow.value = v
+    if (v) {
+      resetAndFetch()
+    }
+  },
+)
+
+watch(
+  () => localShow.value,
+  (v) => emit('update:show', v),
+)
+
+const fetchData = async (append = false) => {
+  if (loading.value || (append && noMore.value)) {
+    return
+  }
+
   loading.value = true
   try {
     const res = await GlobalAPI.query_user_qa_record(
-      pagination.value.page,
-      pagination.value.pageSize,
+      page.value,
+      pageSize.value,
+      searchText.value || undefined,
+      undefined,
     )
-    if (res.ok) {
-      const data = await res.json()
-      if (data && data.data) {
-        tableData.value = data.data.records || []
-        pagination.value.total = data.data.total_count || 0
-        pagination.value.pageCount = data.data.total_pages || 0
-      } else {
-        console.error('Unexpected data format:', data)
-        tableData.value = []
-        pagination.value.total = 0
-        pagination.value.pageCount = 0
-      }
-    } else {
-      console.error('API request failed with status:', res.status)
-      tableData.value = []
-      pagination.value.total = 0
-      pagination.value.pageCount = 0
+    if (!res.ok) {
+      throw new Error(`status ${res.status}`)
     }
-  } catch (error) {
-    console.error('Error fetching data:', error)
-    tableData.value = []
-    pagination.value.total = 0
-    pagination.value.pageCount = 0
+
+    const data = await res.json()
+    const records = data?.data?.records ?? []
+    const totalCount = data?.data?.total_count ?? 0
+
+    listData.value = append ? [...listData.value, ...records] : records
+    total.value = totalCount
+    noMore.value = listData.value.length >= totalCount || records.length === 0
+
+    if (!append) {
+      page.value = 2
+    } else if (!noMore.value) {
+      page.value += 1
+    }
+  } catch (err) {
+    console.error('Error fetching data:', err)
+    message.error('获取数据失败')
   } finally {
     loading.value = false
   }
 }
-function close() {
-  localShow.value = false
-  emit('update:show', false)
-  pagination.value.page = 1
+
+const resetAndFetch = () => {
+  page.value = 1
+  noMore.value = false
+  listData.value = []
+  checked.value.clear()
+  fetchData(false)
 }
 
-const rowKey = (row) => row.chat_id
+const handleSearch = useDebounceFn(() => resetAndFetch(), 300)
 
-function handleCheck(rowKeys) {
-  checkedRowKeys.value = rowKeys
-}
-
-async function deleteSelectedData() {
-  if (checkedRowKeys.value.length === 0) {
-    return
-  }
-  const res = await GlobalAPI.delete_user_record(checkedRowKeys.value)
-  if (res.ok) {
-    fetchData()
-  }
-}
-
-function handlePageChange(page) {
-  pagination.value.page = page
-  fetchData()
-}
-
-function handlePageSizeChange(newPageSize) {
-  pagination.value.pageSize = newPageSize
-  pagination.value.page = 1 // 重置到第一页
-  fetchData()
-}
-
-const modalTitle = computed(
-  () => `管理对话记录 · 共${pagination.value.total}条`,
-)
-
-watch(
-  () => props.show,
-  (newVal) => {
-    if (newVal !== localShow.value) {
-      localShow.value = newVal
-      if (newVal) {
-        fetchData()
-      }
+useInfiniteScroll(
+  scrollEl,
+  () => {
+    if (!loading.value && !noMore.value) {
+      fetchData(true)
     }
   },
+  { distance: 80 },
 )
 
-const tableRef = useTemplateRef('tableRef')
+const close = () => {
+  localShow.value = false
+}
+
+const toggleCheck = (id: string) => {
+  if (checked.value.has(id)) {
+    checked.value.delete(id)
+  } else {
+    checked.value.add(id)
+  }
+}
+
+const toggleAll = () => {
+  if (checked.value.size === listData.value.length) {
+    checked.value.clear()
+  } else {
+    listData.value.forEach((item) => checked.value.add(item.chat_id))
+  }
+}
+
+const deleteSelected = () => {
+  if (checked.value.size === 0) {
+    return
+  }
+  dialog.warning({
+    title: '确认删除',
+    content: `确定删除选中的 ${checked.value.size} 条记录吗？`,
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      const ids = Array.from(checked.value)
+      try {
+        const res = await GlobalAPI.delete_user_record(ids)
+        if (res.ok) {
+          message.success('删除成功')
+          emit('delete', ids)
+          listData.value = listData.value.filter((item) => !checked.value.has(item.chat_id))
+          total.value = Math.max(total.value - ids.length, 0)
+          checked.value.clear()
+          if (listData.value.length < pageSize.value && !noMore.value) {
+            fetchData(true)
+          }
+        } else {
+          message.error('删除失败')
+        }
+      } catch (e) {
+        message.error('删除请求出错')
+      }
+    },
+  })
+}
+
+const deleteOne = (id: string) => {
+  dialog.warning({
+    title: '确认删除',
+    content: '确定删除这条记录吗？',
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        const res = await GlobalAPI.delete_user_record([id])
+        if (res.ok) {
+          message.success('删除成功')
+          emit('delete', [id])
+          listData.value = listData.value.filter((item) => item.chat_id !== id)
+          total.value = Math.max(total.value - 1, 0)
+          checked.value.delete(id)
+          if (listData.value.length < pageSize.value && !noMore.value) {
+            fetchData(true)
+          }
+        }
+      } catch (e) {
+        message.error('删除请求出错')
+      }
+    },
+  })
+}
 </script>
 
 <template>
@@ -154,137 +199,319 @@ const tableRef = useTemplateRef('tableRef')
     :on-after-leave="close"
     preset="card"
     :title="modalTitle"
-    class="custom-modal w-[900px] h-[650px] flex flex-col rounded-2xl overflow-hidden shadow-xl"
-    :header-style="{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6' }"
+    class="modal w-[900px] h-[720px] flex flex-col rounded-2xl overflow-hidden shadow-2xl"
+    :header-style="{ padding: '18px 24px', borderBottom: '1px solid #f2f3f5' }"
     :content-style="{ padding: 0, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }"
     :bordered="false"
   >
-    <!-- Modal Header Customization -->
-    <!-- Removed manual header-extra as n-modal usually provides a close button by default with preset='card'.
-         If duplication occurs, we should let the preset handle it or hide the preset one.
-         Since user said 'two icons', we likely added one manually while the preset added another.
-         We'll remove our manual one here. -->
+    <template #header-extra>
+      <n-input
+        v-model:value="searchText"
+        placeholder="搜索对话记录..."
+        clearable
+        size="medium"
+        class="w-72"
+        @update:value="handleSearch"
+      >
+        <template #prefix>
+          <div class="i-hugeicons:search-01 text-gray-400 text-lg"></div>
+        </template>
+      </n-input>
+    </template>
 
-    <div class="modal-content flex-1 flex flex-col min-h-0 bg-[#f9f9fb]">
-      <n-spin :show="loading" class="flex-1 overflow-hidden flex flex-col">
-        <div class="p-4 flex-1 overflow-auto">
-             <n-data-table
-              ref="tableRef"
-              :data="tableData"
-              :columns="columns"
-              :row-key="rowKey"
-              :checked-row-keys="checkedRowKeys"
-              :single-line="false"
-              class="custom-table"
-              :row-class-name="() => 'custom-row'"
-              @update:checked-row-keys="handleCheck"
-            />
+    <div class="flex-1 flex flex-col min-h-0 bg-[#f8f9fb] overflow-hidden relative">
+      <!-- Top bar -->
+      <div class="sticky top-0 z-10 grid grid-cols-[42px_1fr_160px_56px] gap-3 items-center px-[21px] py-4 bg-white border-b border-gray-100">
+        <div class="flex justify-center">
+          <n-checkbox
+            size="large"
+            :checked="listData.length > 0 && checked.size === listData.length"
+            :indeterminate="checked.size > 0 && checked.size < listData.length"
+            :disabled="listData.length === 0"
+            @update:checked="toggleAll"
+          />
         </div>
-      </n-spin>
+      </div>
 
-      <div class="footer px-6 py-4 bg-white border-t border-gray-100 flex justify-between items-center">
-        <n-pagination
-          v-model:page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :page-count="pagination.pageCount"
-          :page-size="pagination.pageSize"
-          :display-order="['pages', 'quick-jumper']"
-          size="medium"
-          @update:page="handlePageChange"
-          @update:page-size="handlePageSizeChange"
+      <!-- List -->
+      <div
+        ref="scrollEl"
+        class="flex-1 overflow-y-auto p-5 space-y-3 bg-gradient-to-b from-[#f8f9fb] via-white to-[#f8f9fb]"
+      >
+        <div
+          v-for="item in listData"
+          :key="item.chat_id"
+          class="card group"
+          :class="{ 'card--checked': checked.has(item.chat_id) }"
         >
-          <template #prev>
-            <div class="flex items-center gap-1 text-gray-500">
-              <div class="i-hugeicons:arrow-left-01 text-14"></div>
-            </div>
-          </template>
-          <template #next>
-            <div class="flex items-center gap-1 text-gray-500">
-              <div class="i-hugeicons:arrow-right-01 text-14"></div>
-            </div>
-          </template>
-        </n-pagination>
-
-        <div class="flex items-center gap-3">
-          <button
-            class="px-6 py-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium text-15 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow"
-            :disabled="checkedRowKeys.length === 0"
-            @click="deleteSelectedData"
+          <div
+            class="card__check"
+            @click.stop
           >
-            <div class="i-hugeicons:delete-02 text-18"></div>
-            <span>删除所选</span>
-          </button>
+            <n-checkbox
+              size="large"
+              :checked="checked.has(item.chat_id)"
+              @update:checked="() => toggleCheck(item.chat_id)"
+            />
+          </div>
+
+          <div
+            class="card__content"
+            @click="toggleCheck(item.chat_id)"
+          >
+            <div class="avatar">
+              <div class="i-hugeicons:comment-01"></div>
+            </div>
+            <div
+              class="card__text"
+              :title="item.question || item.key"
+            >
+              {{ item.question || item.key || '无标题' }}
+            </div>
+          </div>
+
+          <div class="card__time">
+            {{ item.create_time || '刚刚' }}
+          </div>
+
+          <div class="card__actions">
+            <button
+              class="btn-icon"
+              title="删除"
+              @click.stop="deleteOne(item.chat_id)"
+            >
+              <div class="i-hugeicons:delete-02"></div>
+            </button>
+          </div>
         </div>
+
+        <div
+          v-if="loading"
+          class="py-6 flex justify-center"
+        >
+          <n-spin size="medium" />
+        </div>
+
+        <div
+          v-if="!loading && listData.length === 0"
+          class="empty"
+        >
+          <div class="i-hugeicons:file-02"></div>
+          <span>暂无相关记录</span>
+        </div>
+
+        <div
+          v-else-if="noMore && listData.length > 0"
+          class="bottom-tip"
+        >
+          - 到底了 -
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer flex items-center justify-between px-6 py-4 bg-white border-t border-gray-100">
+        <div class="flex items-center gap-2 text-gray-600">
+          <span>已选择</span>
+          <span class="badge">{{ checked.size }}</span>
+          <span>项</span>
+        </div>
+        <button
+          class="btn-danger"
+          :disabled="!hasSelection"
+          @click="deleteSelected"
+        >
+          <div class="i-hugeicons:delete-02"></div>
+          <span>删除所选</span>
+        </button>
       </div>
     </div>
   </n-modal>
 </template>
 
 <style scoped lang="scss">
-/* Modal Customization */
-
-:deep(.n-modal-body-wrapper) {
-  padding: 0 !important;
+.modal :deep(.n-modal-body-wrapper) {
+  padding: 0;
 }
 
-/* Table Customization */
+.card {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #eef0f3;
+  border-radius: 14px;
+  transition: all 0.2s ease;
 
-:deep(.n-data-table) {
-  --n-th-font-weight: 600 !important;
-  --n-th-text-color: #666 !important;
+  &:hover {
+    border-color: #dfe4f1;
+    box-shadow: 0 8px 24px -10px rgb(31 41 55 / 25%);
+  }
 
-  background-color: transparent !important;
+  &--checked {
+    border-color: #c7d2fe;
+    background: #f5f7ff;
+  }
+
 }
 
-:deep(.n-data-table .n-data-table-th) {
-  background-color: transparent !important;
-  border-bottom: 1px solid #e5e7eb !important;
+.card__check {
+  width: 42px;
+  display: flex;
+  justify-content: center;
+}
+
+.card__content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  display: grid;
+  place-items: center;
+  color: #94a3b8;
+  transition: all 0.2s;
+}
+
+.card:hover .avatar {
+  background: #eef2ff;
+  color: #6366f1;
+}
+
+.card__text {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  color: #1f2937;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card__time {
+  width: 160px;
+  text-align: right;
   font-size: 13px;
-  padding: 12px 16px;
-  color: #666; /* Ensure header text is visible */
+  color: #9ca3af;
+  padding-right: 8px;
 }
 
-:deep(.n-data-table .n-data-table-td) {
-    background-color: #fff !important;
-    border-bottom: 1px solid #f3f4f6 !important;
-    padding: 16px;
-    color: #333 !important;
-    font-size: 14px;
+.card__actions {
+  width: 56px;
+  display: flex;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-:deep(.n-data-table .n-data-table-tr:hover .n-data-table-td) {
-  background-color: #fff !important;
+.card:hover .card__actions {
+  opacity: 1;
 }
 
-/* Row Hover Effect */
-
-:deep(.custom-row) {
+.btn-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: transparent;
+  color: #9ca3af;
   transition: all 0.2s;
 
   &:hover {
-    background-color: #f9fafb !important;
-
-    td {
-      background-color: #f9fafb !important;
-    }
+    background: #fef2f2;
+    color: #ef4444;
   }
 }
 
-/* Pagination Customization */
+.empty {
+  padding: 40px 0;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  color: #9ca3af;
+  font-size: 15px;
 
-:deep(.n-pagination .n-pagination-item) {
-  border: 1px solid transparent;
-  border-radius: 8px;
+  .i-hugeicons\\:file-02 {
+    font-size: 52px;
+    opacity: 0.6;
+  }
+}
 
-  &.n-pagination-item--active {
-    background-color: #f3f4f6;
-    color: #333;
-    border-color: #e5e7eb;
+.bottom-tip {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+  padding: 10px 0;
+}
+
+.footer {
+  position: sticky;
+  bottom: 0;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #ef4444;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s;
+  box-shadow: 0 6px 16px -10px rgb(239 68 68 / 50%);
+
+  &:hover:not(:disabled) {
+    background: #fee2e2;
+    box-shadow: 0 10px 24px -12px rgb(239 68 68 / 55%);
   }
 
-  &:hover:not(.n-pagination-item--active) {
-    background-color: #f9fafb;
-    color: #6366f1;
+  &:active:not(:disabled) {
+    transform: translateY(1px);
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* Scrollbar */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
 }
 </style>

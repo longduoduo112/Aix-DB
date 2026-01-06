@@ -68,7 +68,6 @@ const iconClass = computed(() => getFileIconClass(props.file.source_file_key))
         :style="{
           'font-weight': '500',
           'font-size': '14px',
-          'font-family': `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'`,
         }"
       >
         {{ fileName }}

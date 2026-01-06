@@ -57,8 +57,7 @@ class ExcelAgent:
         current_step = None
 
         # 实现上传一次多次对话的效果 默认单轮对话取最新上传的文件
-        if file_list is None:
-            # todo 使用graph的 state进行管理。
+        if file_list is None or len(file_list) == 0:
             user_qa_record = query_user_qa_record(chat_id)[0]
             if user_qa_record:
                 file_list = json.loads(user_qa_record["file_key"])

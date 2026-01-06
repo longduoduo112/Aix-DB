@@ -6,6 +6,7 @@ const baseThemeOverrides: GlobalThemeOverrides = {
     borderRadius: '6px',
     heightLarge: '40px',
     fontSizeLarge: '18px',
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif',
   },
 }
 

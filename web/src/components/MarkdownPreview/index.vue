@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import type { TransformStreamModelTypes } from './transform'
-import QatypeIcon from '../IconFont/QatypeIcon.vue'
 import MarkdownEcharts from './MarkdownEcharts.vue'
 import MarkdownTable from './MarkdownTable.vue'
 import MarkdownInstance from './plugins/markdown'
@@ -371,6 +370,17 @@ const onTableCompletedReader = function () {
 const onChartCompletedReader = function () {
   emit('chartready')
 }
+
+const qaOptions = [
+  { icon: 'i-hugeicons:ai-chat-02', label: '智能问答', value: 'COMMON_QA', color: '#7E6BF2' },
+  { icon: 'i-hugeicons:database-01', label: '数据问答', value: 'DATABASE_QA', color: '#10b981' },
+  { icon: 'i-hugeicons:table-01', label: '表格问答', value: 'FILEDATA_QA', color: '#f59e0b' },
+  { icon: 'i-hugeicons:search-02', label: '深度搜索', value: 'REPORT_QA', color: '#8b5cf6' },
+]
+
+const currentQaOption = computed(() => {
+  return qaOptions.find((opt) => opt.value === props.qaType) || qaOptions[0]
+})
 </script>
 
 <template>
@@ -383,7 +393,7 @@ const onChartCompletedReader = function () {
     content-class="w-full h-full flex"
     :show="showLoading"
     :rotate="false"
-    class="bg-#f6f7fb"
+    class="bg-white"
     :style="{
       '--n-opacity-spinning': '0.3',
     }"
@@ -420,14 +430,8 @@ const onChartCompletedReader = function () {
         >
           <div
             class="markdown-wrapper"
+            :class="{ typing: readerLoading }"
             v-html="renderedContent"
-          ></div>
-
-          <div
-            v-if="readerLoading"
-            size-24
-            style="margin-left: 10%"
-            class="i-svg-spinners:pulse-3"
           ></div>
 
           <div
@@ -440,14 +444,14 @@ const onChartCompletedReader = function () {
             text-center
             :style="{
               'align-items': `center`,
-              'width': `80%`,
-              'margin-left': `10%`,
-              'margin-right': `10%`,
+              'width': `100%`,
+              'margin-left': `0`,
+              'margin-right': `0`,
             }"
           >
             <MarkdownEcharts
               :chart-id="props.chartId"
-              @chartRendered="() => onChartCompletedReader()"
+              @chart-rendered="() => onChartCompletedReader()"
             />
           </div>
 
@@ -461,23 +465,23 @@ const onChartCompletedReader = function () {
             text-center
             :style="{
               'align-items': `center`,
-              'width': `80%`,
-              'margin-left': `10%`,
-              'margin-right': `10%`,
+              'width': `100%`,
+              'margin-left': `0`,
+              'margin-right': `0`,
             }"
           >
             <MarkdownTable
-              @tableRendered="() => onTableCompletedReader()"
+              @table-rendered="() => onTableCompletedReader()"
             />
           </div>
           <div
             v-if="isCompleted"
             :style="{
-              'background-color': '#ffffff',
-              'width': '80%',
-              'margin-left': '10%',
-              'margin-right': '10%',
-              'padding': '18px 15px',
+              'background-color': '#fff',
+              'width': '100%',
+              'margin-left': '0',
+              'margin-right': '0',
+              'padding': '18px 0px',
               'display': 'flex',
               'border-bottom-right-radius': '15px',
               'border-bottom-left-radius': '15px',
@@ -486,7 +490,20 @@ const onChartCompletedReader = function () {
             }"
           >
             <div style="display: flex">
-              <QatypeIcon :qa_type="qaType" />
+              <div
+                class="mode-pill"
+                :style="{
+                  color: currentQaOption.color,
+                  borderColor: `${currentQaOption.color}30`,
+                  backgroundColor: `${currentQaOption.color}10`,
+                }"
+              >
+                <div
+                  :class="currentQaOption.icon"
+                  class="text-14"
+                ></div>
+                <span class="font-medium">{{ currentQaOption.label }}</span>
+              </div>
             </div>
 
             <div style="display: flex">
@@ -621,29 +638,12 @@ const onChartCompletedReader = function () {
 
 <style lang="scss">
 .markdown-wrapper {
-  margin-left: 10%;
-  margin-right: 10%;
   background-color: #fff;
 
   // background: linear-gradient(to right, #f0effe, #d4eefc);
 
-  padding: 1px 18px;
-  border-top-right-radius: 16px;
-  border-top-left-radius: 16px;
+  padding: 1px 0;
   color: #113;
-
-  /* 优化后的系统字体栈：优先使用系统原生字体 */
-
-  font-family:
-    /* macOS */ -apple-system,
-    /* Windows */ BlinkMacSystemFont,
-    /* 通用系统UI */ 'Segoe UI',
-    /* 开源跨平台 */ Roboto,
-    /* Linux */ Oxygen, Ubuntu, Cantarell,
-    /* fallback */ 'Open Sans', 'Helvetica Neue', Arial,
-    /* 终极兜底 */ sans-serif,
-    /* 现代浏览器推荐 */ system-ui,
-    /* 苹果新字体支持 */ "SF Pro Text";
 
   /* 可选：基础字体大小与行高，提升可读性 */
 
@@ -798,5 +798,18 @@ const onChartCompletedReader = function () {
     border-color: #635eed;
     color: #635eed;
   }
+}
+
+.mode-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  cursor: default;
+  font-weight: 500;
 }
 </style>

@@ -16,6 +16,7 @@ const containerRef = ref<HTMLElement | null>(null)
 const parentContainerRef = ref<HTMLElement | null>(null)
 const containerHeight = ref<number>(800)
 let resizeObserver: ResizeObserver | null = null
+const selectedNode = ref<any>(null)
 
 // Neo4j 风格配置
 const NODE_COLORS = [
@@ -814,7 +815,6 @@ onBeforeUnmount(() => {
   }
 
   :deep(.x6-edge-label) {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 12px;
     font-weight: 500;
     fill: #666;

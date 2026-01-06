@@ -105,7 +105,10 @@ onMounted(() => {
         'padding': '10px',
       }"
     ></n-card> -->
-    <div flex="~ space-between" mb-10></div>
+    <div
+      flex="~ space-between"
+      mb-10
+    ></div>
     <n-data-table
       :columns="columns"
       :data="data"
@@ -113,7 +116,7 @@ onMounted(() => {
       :striped="true"
       :single-line="false"
       size="small"
-      :rowClassName="(row, index) => (index % 2 === 0 ? 'even-row' : 'odd-row')"
+      :row-class-name="(row, index) => (index % 2 === 0 ? 'even-row' : 'odd-row')"
       :style="{ textAlign: 'left' }"
     />
     <!-- <template #footer>

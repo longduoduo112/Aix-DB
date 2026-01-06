@@ -4,12 +4,12 @@ import { systemTitle } from '@/base'
 interface Props {
   transparent?: boolean
   hasBorder?: boolean
-  backgroundColor?: string 
+  backgroundColor?: string
 }
 withDefaults(defineProps<Props>(), {
   transparent: true,
   hasBorder: true,
-  backgroundColor: '#ffffff'
+  backgroundColor: '#fff',
 })
 
 const handleToRepo = () => {
@@ -25,17 +25,17 @@ const handleToRepo = () => {
       transparent ? 'bg-bgcolor' : 'bg-transparent',
       hasBorder ? 'b-b-#000/8 b-b-solid' : 'b-b-transparent',
     ]"
-    :style="backgroundColor ? { backgroundColor: backgroundColor } : {}"
+    :style="backgroundColor ? { backgroundColor } : {}"
   >
     <div class="header-left"></div>
     <div class="flex-1">
-      <div flex="~ col items-center justify-center" px-36px>
+      <div
+        flex="~ col items-center justify-center"
+        px-36px
+      >
         <div
           flex="~ items-center justify-center"
           :style="{
-            'font-family': `-apple-system, BlinkMacSystemFont,
-              'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-              sans-serif`,
             'font-size': `17px`,
             'font-weight': `bold`,
             'color': `#6a30e6`,
@@ -80,12 +80,7 @@ const handleToRepo = () => {
   // 添加具体的背景颜色
 
   &.bg-bgcolor {
-    // background-color: #f0effe;
-    // background: linear-gradient(to right, #f0effe, #ddeefe);
-
-    background-color: #ffffff;
-
-    // 替换为你的颜色
+    background-color: #fff;
   }
 
   &.bg-transparent {

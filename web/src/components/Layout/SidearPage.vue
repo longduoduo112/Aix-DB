@@ -5,9 +5,15 @@ import { NLayout, NLayoutContent, NLayoutFooter, NLayoutHeader } from 'naive-ui'
 
 <template>
   <n-layout class="custom-layout">
-    <n-layout-header class="header">上</n-layout-header>
-    <n-layout-content class="content">中</n-layout-content>
-    <n-layout-footer class="footer">下</n-layout-footer>
+    <n-layout-header class="header">
+      上
+    </n-layout-header>
+    <n-layout-content class="content">
+      中
+    </n-layout-content>
+    <n-layout-footer class="footer">
+      下
+    </n-layout-footer>
   </n-layout>
 </template>
 

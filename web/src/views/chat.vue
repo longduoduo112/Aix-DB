@@ -47,10 +47,12 @@ function openModal() {
 // 模态框关闭
 function handleModalClose(value) {
   isModalOpen.value = value
-  isInit.value = true
-  // 重新加载对话记录
-  loadHistoryList({ reset: true })
-  showDefaultPage.value = true
+  // 仅在关闭弹窗时刷新历史列表，保持当前页面状态，避免默认页/对话区来回切换产生抖动
+  if (!value) {
+    isInit.value = true
+    // 重新加载对话记录
+    loadHistoryList({ reset: true })
+  }
 }
 
 // 新建对话
@@ -334,7 +336,7 @@ const handleCreateStylized = async (
 
     // 清空文件上传列表
     pendingUploadFileInfoList.value = []
-    businessStore.clear_file_list()
+    // businessStore.clear_file_list()
   }
 
   // 自定义id
@@ -786,12 +788,15 @@ const pendingUploadFileInfoList = ref([])
 const handleSubmitFromDefaultPage = (payload: { text: string, mode: string }) => {
   onAqtiveChange(payload.mode, '') // Switch mode
   inputTextString.value = payload.text // Set text
-  handleCreateStylized(payload.text, [], payload.mode) // Submit with explicit mode
+
+  // Pass a copy of the file list to avoid it being cleared if store is cleared
+  const currentFiles = [...businessStore.file_list]
+  handleCreateStylized(payload.text, currentFiles, payload.mode) // Submit with explicit mode and files
 }
 
 // QA Options configuration (duplicated from DefaultPage for consistency in pill display)
 const qaOptions = [
-  { icon: 'i-hugeicons:ai-chat-02', label: '智能问答', value: 'COMMON_QA', color: '#3b82f6' },
+  { icon: 'i-hugeicons:ai-chat-02', label: '智能问答', value: 'COMMON_QA', color: '#7E6BF2' },
   { icon: 'i-hugeicons:database-01', label: '数据问答', value: 'DATABASE_QA', color: '#10b981' },
   { icon: 'i-hugeicons:table-01', label: '表格问答', value: 'FILEDATA_QA', color: '#f59e0b' },
   { icon: 'i-hugeicons:search-02', label: '深度搜索', value: 'REPORT_QA', color: '#8b5cf6' },
@@ -801,10 +806,16 @@ const currentQaOption = computed(() => {
   return qaOptions.find((opt) => opt.value === qa_type.value)
 })
 
+const showModeSelector = ref(false)
+
 const clearMode = () => {
-  // Maybe switch to default? Or just do nothing as chat needs a type?
-  // Let's switch to common if cleared
-  onAqtiveChange('COMMON_QA', '')
+  // Switch to selection mode
+  showModeSelector.value = true
+}
+
+const selectMode = (mode: string) => {
+  onAqtiveChange(mode, '')
+  showModeSelector.value = false
 }
 
 // Navigation Rail Items - REMOVED
@@ -812,7 +823,7 @@ const clearMode = () => {
 
 // Handle History Item Click (Replaces rowProps)
 const handleHistoryClick = async (item: any) => {
-  backgroundColorVariable.value = '#f6f7fb'
+  backgroundColorVariable.value = '#fff'
 
   currentIndex.value = item.uuid
   suggested_array.value = []
@@ -857,10 +868,28 @@ const handleDataSourceManager = () => {
     name: 'DatasourceManager',
   })
 }
+
+const handleUserManager = () => {
+  router.push({
+    name: 'UserManager',
+  })
+}
+
+const handleKnowledgeManager = () => {
+  router.push({
+    name: 'KnowledgeManager',
+  })
+}
+
+const handleLLMConfig = () => {
+  router.push({
+    name: 'LLMConfig',
+  })
+}
 </script>
 
 <template>
-  <div class="flex h-full w-full bg-[#f6f7fb]">
+  <div class="flex h-full w-full bg-[#fff]">
     <n-layout
       class="h-full w-full"
       has-sider
@@ -882,11 +911,11 @@ const handleDataSourceManager = () => {
               @click="showDefaultPage = true"
             >
               <div class="i-hugeicons:ai-chat-02 text-32 c-[#3B5CFF]"></div>
-              <span class="text-24 font-bold text-[#111111] tracking-tight font-sans">通问</span>
+              <span class="text-24 font-bold text-[#111111] tracking-tight font-sans">助手</span>
             </div>
             <div class="header-actions flex items-center gap-5">
               <div
-                class="action-icon i-hugeicons:search-01 text-24 text-[#8A8A8A] hover:text-[#333] cursor-pointer"
+                class="action-icon i-hugeicons:search-01 text-24 text-[#8A8A8A] hover:text-[#333] cursor-pointer mr-4"
                 @click="onFocusSearchChat"
               ></div>
               <div
@@ -900,38 +929,37 @@ const handleDataSourceManager = () => {
           <div class="px-6 pb-6">
             <div
               v-if="isFocusSearchChat"
-              class="h-[54px] flex items-center"
+              class="h-[40px] flex items-center"
             >
               <n-input
                 ref="searchChatRef"
                 v-model:value="searchText"
                 placeholder="搜索历史记录..."
-                class="w-full !rounded-[6px]"
-                :style="{ '--n-border-radius': '6px' }"
-                size="large"
+                class="w-full !rounded-[8px] search-input-custom"
+                size="medium"
                 clearable
                 @blur="onBlurSearchChat"
                 @input="handleSearch"
                 @clear="handleClear"
               >
                 <template #prefix>
-                  <div class="i-hugeicons:search-01 text-gray-400"></div>
+                  <div class="i-hugeicons:search-01 text-[#999] text-16"></div>
                 </template>
               </n-input>
             </div>
             <button
               v-else
-              class="new-chat-btn w-full py-3.5 rounded-[6px] bg-white border border-[#E6E6E6] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] text-[#0D1220] font-medium text-16 flex items-center justify-center gap-2.5 transition-all duration-300"
+              class="new-chat-btn group w-full h-[40px] rounded-[8px] bg-white border border-[#E6E6E6] hover:border-[#7E6BF2] text-[#333] hover:text-[#7E6BF2] font-medium text-[14px] flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow-[0_2px_12px_rgba(126,107,242,0.1)]"
               :disabled="stylizingLoading"
               @click="newChat"
             >
-              <div class="i-hugeicons:comment-add-01 text-20"></div>
+              <div class="i-hugeicons:comment-add-01 text-18"></div>
               <span>新对话</span>
             </button>
           </div>
 
           <!-- Recent Chats Label -->
-          <div class="px-6 py-4 flex justify-between items-center">
+          <div class="px-6 py-4 flex justify-between items-center mt-10 ml-10 mb-5">
             <span class="text-[#7A7A7A] text-[13px] font-semibold tracking-wide">最近对话</span>
             <div
               class="i-hugeicons:settings-04 text-18 text-[#7A7A7A] cursor-pointer hover:text-gray-600"
@@ -960,7 +988,7 @@ const handleDataSourceManager = () => {
               @click="handleHistoryClick(item)"
             >
               <div class="flex items-center gap-2 overflow-hidden w-full">
-                <div class="truncate text-[14px] w-full leading-relaxed">
+                <div class="truncate text-[14px] w-full leading-relaxed ml-10 mt-10">
                   {{ item.key || '无标题对话' }}
                 </div>
               </div>
@@ -983,7 +1011,7 @@ const handleDataSourceManager = () => {
           <div class="sidebar-footer px-6 py-5 flex items-center justify-between bg-[#F6F6F8] mt-auto">
             <n-popover
               trigger="hover"
-              placement="top-start"
+              placement="right-end"
               :show-arrow="false"
               raw
               :style="{ padding: 0 }"
@@ -1016,6 +1044,36 @@ const handleDataSourceManager = () => {
                     </div>
                     <span class="text-12 text-[#666] group-hover:text-[#333]">数据源管理</span>
                   </div>
+
+                  <div
+                    class="flex flex-col items-center gap-2 cursor-pointer group"
+                    @click="handleUserManager"
+                  >
+                    <div class="relative">
+                      <div class="i-hugeicons:user-group text-20 text-[#666] group-hover:text-[#333] transition-colors"></div>
+                    </div>
+                    <span class="text-12 text-[#666] group-hover:text-[#333]">用户管理</span>
+                  </div>
+
+                  <div
+                    class="flex flex-col items-center gap-2 cursor-pointer group"
+                    @click="handleKnowledgeManager"
+                  >
+                    <div class="relative">
+                      <div class="i-hugeicons:book-open-01 text-20 text-[#666] group-hover:text-[#333] transition-colors"></div>
+                    </div>
+                    <span class="text-12 text-[#666] group-hover:text-[#333]">知识库管理</span>
+                  </div>
+
+                  <div
+                    class="flex flex-col items-center gap-2 cursor-pointer group"
+                    @click="handleLLMConfig"
+                  >
+                    <div class="relative">
+                      <div class="i-hugeicons:cpu text-20 text-[#666] group-hover:text-[#333] transition-colors"></div>
+                    </div>
+                    <span class="text-12 text-[#666] group-hover:text-[#333]">大模型配置</span>
+                  </div>
                 </div>
 
                 <!-- Logout -->
@@ -1039,7 +1097,7 @@ const handleDataSourceManager = () => {
         </div>
       </n-layout-sider>
 
-      <n-layout-content class="content h-full bg-[#f6f7fb]">
+      <n-layout-content class="content h-full bg-[#fff]">
         <!-- 内容区域 -->
         <div
           flex="~ 1 col"
@@ -1069,7 +1127,6 @@ const handleDataSourceManager = () => {
 
               <div class="model-info flex items-center gap-1.5 cursor-pointer">
                 <span class="text-[16px] font-medium text-[#111]">Qwen3-Max</span>
-                <div class="i-hugeicons:arrow-down-01 text-16 text-[#111] stroke-[1.5]"></div>
               </div>
             </div>
             <!--
@@ -1086,7 +1143,6 @@ const handleDataSourceManager = () => {
             min-h-0
             pb-20
             class="scrollable-container"
-            :style="{ backgroundColor: backgroundColorVariable }"
             @scroll="handleScroll"
           >
             <!-- 默认对话页面 -->
@@ -1110,49 +1166,39 @@ const handleDataSourceManager = () => {
               >
                 <div
                   v-if="item.role === 'user'"
-                  class="flex flex-col items-end space-y-2 w-full"
+                  class="flex flex-col items-end space-y-2 w-full max-w-[890px] mx-auto"
                 >
                   <!-- 用户消息 -->
                   <div
                     :style="{
-                      'margin-left': `10%`,
-                      'margin-right': `10%`,
-                      'padding': `15px`,
+                      'margin-left': `0`,
+                      'margin-right': `0`,
+                      'padding': `15px 0`,
                       'border-radius': `5px`,
                       'text-align': `center`,
-                      'max-width': '80%', // 控制宽度避免撑满
+                      'max-width': '100%',
                     }"
                   >
-                    <n-space>
-                      <n-tag
-                        size="large"
-                        :bordered="false"
-                        :round="true"
+                    <n-space justify="center">
+                      <div
                         :style="{
                           'fontSize': '16px',
                           'fontFamily': `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'`,
                           'fontWeight': '400',
-                          'color': '#26244c',
-                          'max-width': '600px',
+                          'color': '#1a1a1a',
+                          'backgroundColor': '#f5f7ff',
+                          'borderRadius': '12px',
+                          'max-width': '800px',
                           'text-align': 'left',
-                          'padding': '5px 18px',
-                          'height': 'auto',
-                          'line-height': 1.5,
+                          'padding': '12px 20px',
+                          'line-height': 1.6,
                           'word-wrap': 'break-word',
                           'word-break': 'break-all',
                           'white-space': 'pre-wrap',
-                          'overflow': 'visible',
-                        }"
-                        :color="{
-                          color: '#e0dfff',
-                          borderColor: '#e0dfff',
                         }"
                       >
-                        <template #avatar>
-                          <div class="size-25 i-my-svg:user-avatar"></div>
-                        </template>
                         {{ item.question }}
-                      </n-tag>
+                      </div>
                     </n-space>
                   </div>
 
@@ -1160,7 +1206,7 @@ const handleDataSourceManager = () => {
                   <div
                     v-if="item.file_key && item.file_key.length > 0"
                     class="upload-wrapper-list flex flex-wrap gap-10 items-center pb-5"
-                    style="margin-left: 10%; margin-right: 10.5%; width: 80%; justify-content: flex-end;"
+                    style="margin-left: 0; margin-right: 0; width: 100%; justify-content: flex-end;"
                   >
                     <FileListItem
                       v-for="(file, fileIndex) in item.file_key"
@@ -1181,12 +1227,15 @@ const handleDataSourceManager = () => {
                       'animation': `spin 1s linear infinite`,
                       'margin-top': '10px',
                       'align-self': 'flex-start', // 让此元素在交叉轴（水平轴）上靠左对齐
-                      'margin-left': '12%', // 与上面的消息保持一致的缩进
+                      'margin-left': '0', // 与上面的消息保持一致的缩进
                     }"
                   ></div>
                 </div>
 
-                <div v-if="item.role === 'assistant'">
+                <div
+                  v-if="item.role === 'assistant'"
+                  class="max-w-[890px] w-full mx-auto"
+                >
                   <MarkdownPreview
                     :reader="item.reader"
                     :model="defaultLLMTypeName"
@@ -1234,62 +1283,107 @@ const handleDataSourceManager = () => {
             class="bottom-input-container"
           >
             <div class="input-card">
-              <!-- Pill for current mode -->
-              <div class="input-wrapper">
-                <div
-                  v-if="currentQaOption"
-                  class="mode-pill"
-                  :style="{ color: currentQaOption.color, backgroundColor: `${currentQaOption.color}15` }"
-                >
-                  <div
-                    :class="currentQaOption.icon"
-                    class="pill-icon"
-                  ></div>
-                  <span>{{ currentQaOption.label }}</span>
-                  <!-- <div class="i-hugeicons:cancel-01 close-icon" @click="clearMode"></div> -->
-                </div>
+              <!-- Top: File Uploads -->
+              <FileUploadManager
+                ref="fileUploadRef"
+                v-model="pendingUploadFileInfoList"
+                class="w-full"
+              />
 
-                <FileUploadManager
-                  ref="fileUploadRef"
-                  v-model="pendingUploadFileInfoList"
-                />
-
+              <!-- Middle: Input -->
+              <div class="input-wrapper w-full">
                 <n-input
                   ref="refInputTextString"
                   v-model:value="inputTextString"
                   type="textarea"
-                  placeholder="帮你完成复杂任务，并生成研究报告"
+                  placeholder="先思考后回答，解决更有难度的问题"
                   :autosize="{ minRows: 1, maxRows: 6 }"
                   class="custom-chat-input"
                   @keydown.enter.prevent="handleCreateStylized()"
-                >
-                  <template #prefix>
-                    <!-- Hide default upload dropdown if we want to change UI,
-                                  but for now keeping it as it provides file functionality.
-                                  Maybe we can restyle it? -->
-                    <!-- Keeping original upload dropdown for function -->
-                    <n-dropdown :options="fileUploadRef?.options || []">
-                      <div class="action-icon i-hugeicons:attachment-01"></div>
-                    </n-dropdown>
-                  </template>
-                </n-input>
+                />
               </div>
 
-              <div class="action-row">
-                <!-- Left Action (Expand) -->
-                <div class="i-hugeicons:expand-01 action-icon"></div>
-
-                <!-- Right Action (Send/Stop) -->
-                <div class="send-btn-wrapper">
+              <!-- Bottom: Footer Actions -->
+              <div class="input-footer flex justify-between items-center mt-3">
+                <!-- Left: Mode Pill (Deep Thinking) -->
+                <div class="left-actions">
                   <div
-                    v-if="stylizingLoading"
-                    class="i-svg-spinners:pulse-2 c-#26244c text-20"
-                  ></div>
+                    v-if="!showModeSelector && currentQaOption"
+                    class="mode-pill"
+                    :style="{
+                      color: currentQaOption.color,
+                      borderColor: `${currentQaOption.color}30`,
+                      backgroundColor: `${currentQaOption.color}10`,
+                    }"
+                  >
+                    <div
+                      :class="currentQaOption.icon"
+                      class="text-16"
+                    ></div>
+                    <span class="font-medium">{{ currentQaOption.label }}</span>
+                    <div
+                      class="i-hugeicons:cancel-01 text-14 ml-1 cursor-pointer opacity-60 hover:opacity-100"
+                      @click="clearMode"
+                    ></div>
+                  </div>
                   <div
                     v-else
-                    class="i-hugeicons:stop-circle send-icon"
+                    class="flex items-center gap-2"
+                  >
+                    <n-tooltip
+                      v-for="opt in qaOptions"
+                      :key="opt.value"
+                      trigger="hover"
+                    >
+                      <template #trigger>
+                        <div
+                          class="mode-icon-btn"
+                          :class="{ active: qa_type === opt.value }"
+                          :style="{
+                            '--active-color': opt.color,
+                            '--active-bg': `${opt.color}15`,
+                          }"
+                          @click.stop="selectMode(opt.value)"
+                        >
+                          <div
+                            :class="opt.icon"
+                            class="text-14"
+                            :style="{ color: opt.color }"
+                          ></div>
+                          <span class="mode-icon-label">{{ opt.label }}</span>
+                        </div>
+                      </template>
+                      {{ opt.label }}
+                    </n-tooltip>
+                  </div>
+                </div>
+
+                <!-- Right: Attachment + Send -->
+                <div class="right-actions flex items-center gap-3">
+                  <!-- Attachment (Paperclip) -->
+                  <n-dropdown
+                    :options="fileUploadRef?.options || []"
+                    trigger="click"
+                    placement="top-end"
+                  >
+                    <div class="action-icon i-hugeicons:attachment-01 text-20 text-gray-400 hover:text-gray-600 cursor-pointer"></div>
+                  </n-dropdown>
+
+                  <!-- Send Button (Purple Circle) -->
+                  <div
+                    class="send-btn-circle"
+                    :class="{ disabled: !inputTextString && !pendingUploadFileInfoList?.length }"
                     @click="handleCreateStylized()"
-                  ></div>
+                  >
+                    <div
+                      v-if="stylizingLoading"
+                      class="i-svg-spinners:pulse-2 text-white text-18"
+                    ></div>
+                    <div
+                      v-else
+                      class="i-hugeicons:arrow-up-01 text-white text-20 font-bold"
+                    ></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1311,8 +1405,8 @@ const handleDataSourceManager = () => {
 /* Sidebar Styles */
 
 .qianwen-sidebar {
-  background-color: #f9f9f9;
-  border-right: 1px solid #f0f0f0;
+  background-color: #fff;
+  border-right: 1px solid #fff;
 }
 
 .new-chat-btn {
@@ -1392,30 +1486,30 @@ const handleDataSourceManager = () => {
 /* Bottom Input Area Styles (C Style) */
 
 .bottom-input-container {
-  padding: 20px 40px;
-  background-color: #fff;
+  padding: 20px 0;
+  background-color: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
 }
 
 .input-card {
   width: 100%;
-  max-width: 900px;
+  max-width: 890px;
   background-color: #fff;
   border-radius: 20px;
   box-shadow: 0 4px 20px rgb(0 0 0 / 8%);
   border: 1px solid #e5e7eb;
-  padding: 16px;
+  padding: 16px 20px;
   position: relative;
   display: flex;
   flex-direction: column;
 }
 
 .input-wrapper {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  /* display: flex; align-items: flex-start; gap: 8px; */
+
   width: 100%;
 }
 
@@ -1423,18 +1517,41 @@ const handleDataSourceManager = () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  user-select: none;
-  flex-shrink: 0;
-  margin-top: 6px;
+  font-size: 13px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  cursor: default;
 }
 
-.pill-icon {
-  font-size: 14px;
+.mode-icon-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #f8fafc;
+  border: 1px solid transparent;
+
+  &:hover {
+    background-color: #f1f5f9;
+    color: #334155;
+  }
+
+  &.active {
+    color: var(--active-color);
+    background-color: var(--active-bg);
+  }
+}
+
+.mode-icon-label {
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .custom-chat-input {
@@ -1445,7 +1562,7 @@ const handleDataSourceManager = () => {
   --n-box-shadow-focus: none !important;
 
   background-color: transparent !important;
-  font-size: 15px;
+  font-size: 16px;
   padding: 0;
   flex: 1;
 
@@ -1460,11 +1577,11 @@ const handleDataSourceManager = () => {
   }
 }
 
-.action-row {
+.input-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .action-icon {
@@ -1478,13 +1595,32 @@ const handleDataSourceManager = () => {
   }
 }
 
-.send-btn-wrapper {
+.send-btn-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #7E6BF2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-}
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgb(126 107 242 / 30%);
 
-.send-icon {
-  font-size: 28px;
-  color: #26244c; /* Dark Navy */
+  &:hover {
+    background-color: #6b5ae0;
+    transform: scale(1.05);
+  }
+
+  &.disabled {
+    background-color: #e5e7eb;
+    cursor: not-allowed;
+    box-shadow: none;
+
+    .i-hugeicons:arrow-up-01 {
+      color: #9ca3af;
+    }
+  }
 }
 
 .footer-note {
@@ -1513,7 +1649,6 @@ const handleDataSourceManager = () => {
   width: 100%;
   height: 36px;
   text-align: center;
-  font-family: Arial;
   font-weight: bold;
   font-size: 14px;
   border-radius: 20px;
@@ -1523,7 +1658,6 @@ const handleDataSourceManager = () => {
   width: 36px;
   height: 36px;
   text-align: center;
-  font-family: Arial;
   font-weight: bold;
   font-size: 14px;
   border-radius: 50%;
@@ -1539,9 +1673,7 @@ const handleDataSourceManager = () => {
   overflow-y: auto; // 添加纵向滚动条
   height: 100%;
   padding-bottom: 20px; // 底部内边距，防止内容被遮挡
-  background-color: #f6f7fb;
-
-  // background: linear-gradient(to bottom, #f0effe, #f6f7fb);
+  background-color: #fff;
 }
 
 /* 滚动条整体部分 */
@@ -1674,10 +1806,8 @@ const handleDataSourceManager = () => {
 }
 
 .content {
-  border-right:1px solid #f6f7fb;
+  border-right:1px solid #fff;
   background-color: #fff;
-
-  // padding: 8px;
 }
 
 .footer {
@@ -1795,5 +1925,25 @@ const handleDataSourceManager = () => {
 .upload-wrapper-list {
   --at-apply: flex flex-wrap gap-10 items-center;
   --at-apply: pb-12;
+}
+
+.search-input-custom {
+  --n-border: 1px solid #E6E6E6 !important;
+  --n-border-hover: 1px solid #7E6BF2 !important;
+  --n-border-focus: 1px solid #7E6BF2 !important;
+  --n-box-shadow-focus: 0 0 0 2px rgb(126 107 242 / 10%) !important;
+  --n-caret-color: #7E6BF2 !important;
+
+  :deep(.n-input__input-el) {
+    height: 38px !important;
+  }
+
+  :deep(.n-input__border) {
+    border-radius: 8px !important;
+  }
+
+  :deep(.n-input__state-border) {
+    border-radius: 8px !important;
+  }
 }
 </style>

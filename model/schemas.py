@@ -344,6 +344,7 @@ class DifyGetAnswerRequest(BaseModel):
     chat_id: str = Field(description="聊天ID")
     uuid: str = Field(description="uuid")
     qa_type: str = Field(description="问答类型")
+    file_list: List[Dict] = Field(default_factory=list, description="文件列表")
 
 
 class DifyGetSuggestedRequest(BaseModel):

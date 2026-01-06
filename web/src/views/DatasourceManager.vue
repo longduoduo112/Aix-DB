@@ -490,7 +490,7 @@ onMounted(() => {
         }
 
         .value {
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          font-family: "Fira Code", "Fira Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
           background: #f9fafb;
           padding: 2px 6px;
           border-radius: 4px;

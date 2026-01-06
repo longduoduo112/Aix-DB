@@ -39,7 +39,7 @@ const edgeOption = {
     text: {
       fontSize: 11,
       fill: '#666',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      fontFamily: 'inherit',
       fontWeight: 400,
       textAnchor: 'middle',
       textVerticalAnchor: 'middle',
@@ -1011,7 +1011,6 @@ const zoomReset = () => graph && graph.zoom(1)
   }
 
   :deep(.x6-edge-label) {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 12px;
     font-weight: 500;
     fill: #666;
