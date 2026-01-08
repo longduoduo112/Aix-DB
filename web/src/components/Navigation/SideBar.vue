@@ -119,7 +119,7 @@ interface SidebarItemType {
   key: string
   renderIcon: () => any
   onClick?: () => void
-  children?: { label: string; key: string }[]
+  children?: { label: string, key: string }[]
   props: Record<string, any>
 }
 
@@ -177,7 +177,7 @@ const sidebarItems = ref<SidebarItemType[]>([
     props: {},
   },
   {
-    label: 'SQL示例库',
+    label: 'SQL 示例库',
     key: 'SqlExampleLibrary',
     renderIcon() {
       return (
@@ -277,33 +277,36 @@ const handleMenuSelect = (key: string) => {
         flex="1 ~ col gap-28"
         pt-24
       >
-        <template v-for="(sidebarItem) in sidebarItems" :key="sidebarItem.key">
-           <n-dropdown
-              v-if="sidebarItem.children"
-              trigger="hover"
-              placement="right-start"
-              :options="sidebarItem.children"
-              @select="handleSidebarMenuSelect"
-           >
-              <SideBarItem
-                :label="sidebarItem.label"
-                :active="(sidebarItem.children && sidebarItem.children.some(c => c.key === route.name)) || sidebarItem.key === route.name"
-                v-bind="sidebarItem.props"
-                :theme="$props.theme"
-              >
-                <component :is="sidebarItem.renderIcon" />
-              </SideBarItem>
-           </n-dropdown>
-           <SideBarItem
-             v-else
-             :label="sidebarItem.label"
-             :active="sidebarItem.key === route.name"
-             v-bind="sidebarItem.props"
-             :theme="$props.theme"
-             @click="sidebarItem.onClick && sidebarItem.onClick.call(sidebarItem)"
-           >
-             <component :is="sidebarItem.renderIcon" />
-           </SideBarItem>
+        <template
+          v-for="(sidebarItem) in sidebarItems"
+          :key="sidebarItem.key"
+        >
+          <n-dropdown
+            v-if="sidebarItem.children"
+            trigger="hover"
+            placement="right-start"
+            :options="sidebarItem.children"
+            @select="handleSidebarMenuSelect"
+          >
+            <SideBarItem
+              :label="sidebarItem.label"
+              :active="(sidebarItem.children && sidebarItem.children.some(c => c.key === route.name)) || sidebarItem.key === route.name"
+              v-bind="sidebarItem.props"
+              :theme="$props.theme"
+            >
+              <component :is="sidebarItem.renderIcon" />
+            </SideBarItem>
+          </n-dropdown>
+          <SideBarItem
+            v-else
+            :label="sidebarItem.label"
+            :active="sidebarItem.key === route.name"
+            v-bind="sidebarItem.props"
+            :theme="$props.theme"
+            @click="sidebarItem.onClick && sidebarItem.onClick.call(sidebarItem)"
+          >
+            <component :is="sidebarItem.renderIcon" />
+          </SideBarItem>
         </template>
       </div>
 

@@ -43,6 +43,7 @@
     "naive-ui": "^2.38.2",
     "nprogress": "^0.2.0",
     "pinia": "^3.0.2",
+    "sql-formatter": "^15.6.12",
     "three": "^0.181.2",
     "uuid": "^9.0.1",
     "vfile": "^6.0.1",

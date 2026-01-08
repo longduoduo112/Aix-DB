@@ -1,12 +1,13 @@
 <script lang="ts" setup>
 import type { FormInst } from 'naive-ui'
-import { NButton, NSpace, useDialog } from 'naive-ui'
+import { NButton, NSpace, useDialog, useMessage } from 'naive-ui'
 import { h, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { addUser, deleteUser, queryUserList, updateUser } from '@/api/user'
 
 const router = useRouter()
 const dialog = useDialog()
+const message = useMessage()
 
 // State
 const loading = ref(false)
@@ -71,11 +72,11 @@ const fetchData = async () => {
       userList.value = result.data.records
       total.value = result.data.total_count
     } else {
-      window.$message?.error(result.msg || '查询失败')
+      message.error(result.msg || '查询失败')
     }
   } catch (e) {
     console.error(e)
-    window.$message?.error('网络错误')
+    message.error('网络错误')
   } finally {
     loading.value = false
   }
@@ -120,14 +121,14 @@ const handleDelete = (row: any) => {
         const res = await deleteUser(row.id)
         const result = await res.json()
         if (result.code === 200) {
-          window.$message?.success('删除成功')
+          message.success('删除成功')
           fetchData()
         } else {
-          window.$message?.error(result.msg || '删除失败')
+          message.error(result.msg || '删除失败')
         }
       } catch (e) {
         console.error(e)
-        window.$message?.error('网络错误')
+        message.error('网络错误')
       }
     },
   })
@@ -138,7 +139,7 @@ const handleSave = async () => {
     if (!errors) {
       // Custom validation for password
       if (modalType.value === 'add' && !formModel.password) {
-        window.$message?.error('请输入密码')
+        message.error('请输入密码')
         return
       }
 
@@ -151,22 +152,18 @@ const handleSave = async () => {
         }
         const result = await res.json()
         if (result.code === 200) {
-          window.$message?.success('保存成功')
+          message.success('保存成功')
           showModal.value = false
           fetchData()
         } else {
-          window.$message?.error(result.msg || '保存失败')
+          message.error(result.msg || '保存失败')
         }
       } catch (e) {
         console.error(e)
-        window.$message?.error('网络错误')
+        message.error('网络错误')
       }
     }
   })
-}
-
-const handleBack = () => {
-  router.push('/')
 }
 
 onMounted(() => {
@@ -178,12 +175,7 @@ onMounted(() => {
   <div class="user-manager">
     <div class="header">
       <div class="title-section">
-        <div
-          class="back-btn"
-          @click="handleBack"
-        >
-          <div class="i-hugeicons:arrow-left-01 text-24"></div>
-        </div>
+        <div class="i-carbon-user-multiple text-24 text-primary mr-2"></div>
         <h2>用户管理</h2>
       </div>
       <div class="actions">
@@ -303,43 +295,25 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .user-manager {
-  padding: 24px 32px;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: #f9fafb;
+  background-color: #fff;
 
   .header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 32px;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid #f3f4f6;
 
     .title-section {
       display: flex;
       align-items: center;
-      gap: 12px;
-
-      .back-btn {
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-        color: #4b5563;
-
-        &:hover {
-          background-color: #f3f4f6;
-          color: #111827;
-        }
-      }
 
       h2 {
         margin: 0;
-        font-size: 24px;
+        font-size: 18px;
         font-weight: 600;
         color: #1f2937;
       }
@@ -361,17 +335,14 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #fff;
-    border-radius: 12px;
-    border: 1px solid #f3f4f6;
-    padding: 20px;
+    padding: 16px 24px;
 
     .user-table {
       flex: 1;
     }
 
     .pagination-container {
-      margin-top: 20px;
+      margin-top: 16px;
       display: flex;
       justify-content: flex-end;
     }

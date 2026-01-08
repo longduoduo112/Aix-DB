@@ -558,3 +558,82 @@ class SavePermissionResponse(BaseResponse):
 
 class DeletePermissionResponse(BaseResponse):
     data: Dict[str, str] = Field(description="删除结果")
+
+
+# ==================== 术语管理相关模型 ====================
+class TerminologyItem(BaseModel):
+    id: Optional[int] = Field(None, description="ID")
+    word: str = Field(description="术语名称")
+    description: str = Field(description="描述")
+    other_words: List[str] = Field(default=[], description="同义词")
+    specific_ds: bool = Field(False, description="是否指定数据源")
+    datasource_ids: List[int] = Field(default=[], description="数据源ID列表")
+    datasource_names: List[str] = Field(default=[], description="数据源名称列表")
+    enabled: bool = Field(True, description="是否启用")
+    create_time: Optional[str] = Field(None, description="创建时间")
+
+
+class TerminologyListResponse(BaseResponse):
+    data: PaginatedResponse[TerminologyItem] = Field(description="术语列表")
+
+
+class QueryTerminologyRequest(PaginationParams):
+    word: Optional[str] = Field(None, description="搜索关键词")
+    dslist: Optional[List[int]] = Field(None, description="数据源筛选")
+
+
+class SaveTerminologyRequest(BaseModel):
+    id: Optional[int] = Field(None, description="ID，更新时必填")
+    word: str = Field(description="术语名称")
+    description: str = Field(description="描述")
+    other_words: List[str] = Field(default=[], description="同义词")
+    specific_ds: bool = Field(False, description="是否指定数据源")
+    datasource_ids: List[int] = Field(default=[], description="数据源ID列表")
+    enabled: bool = Field(True, description="是否启用")
+
+
+class DeleteTerminologyRequest(BaseModel):
+    ids: List[int] = Field(description="ID列表")
+
+
+class GenerateSynonymsRequest(BaseModel):
+    word: str = Field(description="术语名称")
+
+
+class GenerateSynonymsResponse(BaseResponse):
+    data: List[str] = Field(description="生成的同义词列表")
+
+
+# ==================== 数据训练相关模型 ====================
+class DataTrainingItem(BaseModel):
+    id: Optional[int] = Field(None, description="ID")
+    question: str = Field(description="问题描述")
+    description: str = Field(description="示例SQL")
+    datasource: Optional[int] = Field(None, description="数据源ID")
+    datasource_name: Optional[str] = Field(None, description="数据源名称")
+    advanced_application: Optional[int] = Field(None, description="高级应用ID")
+    advanced_application_name: Optional[str] = Field(None, description="高级应用名称")
+    enabled: bool = Field(True, description="是否启用")
+    create_time: Optional[str] = Field(None, description="创建时间")
+
+
+class DataTrainingListResponse(BaseResponse):
+    data: PaginatedResponse[DataTrainingItem] = Field(description="数据训练列表")
+
+
+class SaveDataTrainingRequest(BaseModel):
+    id: Optional[int] = Field(None, description="ID")
+    question: str = Field(description="问题描述")
+    description: str = Field(description="示例SQL")
+    datasource: Optional[int] = Field(None, description="数据源ID")
+    advanced_application: Optional[int] = Field(None, description="高级应用ID")
+    enabled: bool = Field(True, description="是否启用")
+
+
+class DeleteDataTrainingRequest(BaseModel):
+    ids: List[int] = Field(description="ID列表")
+
+
+class EnableDataTrainingRequest(BaseModel):
+    id: int = Field(description="ID")
+    enabled: bool = Field(description="是否启用")

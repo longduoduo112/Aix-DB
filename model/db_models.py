@@ -111,3 +111,37 @@ class TDsPermission(Base):
     )
     auth_target_type: Mapped[Optional[str]] = mapped_column(String(128), comment="授权目标类型")
     auth_target_id: Mapped[Optional[int]] = mapped_column(BigInteger, comment="授权目标ID")
+
+
+class TTerminology(Base):
+    __tablename__ = "t_terminology"
+    __table_args__ = {"comment": "术语配置表"}
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    oid: Mapped[Optional[int]] = mapped_column(BigInteger, default=1, comment="组织ID")
+    pid: Mapped[Optional[int]] = mapped_column(BigInteger, comment="父ID")
+    word: Mapped[Optional[str]] = mapped_column(String(255), comment="术语名称")
+    description: Mapped[Optional[str]] = mapped_column(Text, comment="描述")
+    specific_ds: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, comment="是否指定数据源")
+    datasource_ids: Mapped[Optional[str]] = mapped_column(Text, comment="数据源ID列表(JSON)")
+    enabled: Mapped[Optional[bool]] = mapped_column(Boolean, default=True, comment="是否启用")
+    create_time: Mapped[Optional[datetime.datetime]] = mapped_column(
+        TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"), comment="创建时间"
+    )
+
+
+class TDataTraining(Base):
+    __tablename__ = "t_data_training"
+    __table_args__ = {"comment": "数据训练表"}
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    oid: Mapped[Optional[int]] = mapped_column(BigInteger, default=1, comment="组织ID")
+    datasource: Mapped[Optional[int]] = mapped_column(BigInteger, comment="数据源ID")
+    create_time: Mapped[Optional[datetime.datetime]] = mapped_column(
+        TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"), comment="创建时间"
+    )
+    question: Mapped[Optional[str]] = mapped_column(String(255), comment="问题描述")
+    description: Mapped[Optional[str]] = mapped_column(Text, comment="示例SQL")
+    # embedding: Mapped[Optional[str]] = mapped_column(Text, comment="向量数据") # 暂不使用 pgvector 对象，避免依赖问题
+    enabled: Mapped[Optional[bool]] = mapped_column(Boolean, default=True, comment="是否启用")
+    advanced_application: Mapped[Optional[int]] = mapped_column(BigInteger, comment="高级应用ID")

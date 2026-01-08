@@ -59,7 +59,7 @@ const childrenRoutes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true },
   },
   {
-    path: 'sql-example-library',
+    path: 'set/training',
     name: 'SqlExampleLibrary',
     component: () => import('@/views/SqlExampleLibrary.vue'),
     meta: { requiresAuth: true },

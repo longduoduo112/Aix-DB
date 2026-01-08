@@ -5,6 +5,9 @@
 -- 注意：PostgreSQL 中需要先连接到 postgres 数据库才能创建新数据库
 -- CREATE DATABASE chat_db;
 
+-- 启用向量扩展（只需一次）
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- t_datasource definition
 DROP TABLE IF EXISTS t_datasource CASCADE;
 CREATE TABLE t_datasource (
@@ -200,3 +203,49 @@ COMMENT ON TABLE t_ds_permission IS '数据权限详情';
 COMMENT ON COLUMN t_ds_permission.type IS '权限类型: row, column';
 COMMENT ON COLUMN t_ds_permission.expression_tree IS '行权限表达式树(JSON)';
 COMMENT ON COLUMN t_ds_permission.permissions IS '列权限配置(JSON)';
+
+
+CREATE TABLE IF NOT EXISTS t_terminology (
+    id BIGSERIAL PRIMARY KEY,
+    oid BIGINT DEFAULT 1,
+    pid BIGINT,
+    word VARCHAR(255),
+    description TEXT,
+    specific_ds BOOLEAN DEFAULT FALSE,
+    datasource_ids TEXT,
+    enabled BOOLEAN DEFAULT TRUE,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE t_terminology IS '术语配置表';
+COMMENT ON COLUMN t_terminology.oid IS '组织ID';
+COMMENT ON COLUMN t_terminology.pid IS '父ID';
+COMMENT ON COLUMN t_terminology.word IS '术语名称';
+COMMENT ON COLUMN t_terminology.description IS '描述';
+COMMENT ON COLUMN t_terminology.specific_ds IS '是否指定数据源';
+COMMENT ON COLUMN t_terminology.datasource_ids IS '数据源ID列表(JSON)';
+COMMENT ON COLUMN t_terminology.enabled IS '是否启用';
+COMMENT ON COLUMN t_terminology.create_time IS '创建时间';
+
+DROP TABLE IF EXISTS t_data_training CASCADE;
+CREATE TABLE t_data_training (
+  id BIGSERIAL PRIMARY KEY,
+  oid BIGINT DEFAULT 1,
+  datasource BIGINT,
+  create_time TIMESTAMP,
+  question VARCHAR(255),
+  description TEXT,
+  embedding VECTOR,
+  enabled BOOLEAN DEFAULT TRUE,
+  advanced_application BIGINT
+);
+
+COMMENT ON TABLE t_data_training IS '数据训练表';
+COMMENT ON COLUMN t_data_training.oid IS '组织ID';
+COMMENT ON COLUMN t_data_training.datasource IS '数据源ID';
+COMMENT ON COLUMN t_data_training.create_time IS '创建时间';
+COMMENT ON COLUMN t_data_training.question IS '问题描述';
+COMMENT ON COLUMN t_data_training.description IS '示例SQL';
+COMMENT ON COLUMN t_data_training.embedding IS '向量数据';
+COMMENT ON COLUMN t_data_training.enabled IS '是否启用';
+COMMENT ON COLUMN t_data_training.advanced_application IS '高级应用ID';

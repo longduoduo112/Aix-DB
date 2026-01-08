@@ -20,7 +20,7 @@ const menuItems = [
   { key: 'user', label: '用户管理', icon: 'i-material-symbols:person-outline' },
   { key: 'permission', label: '权限配置', icon: 'i-material-symbols:lock-outline' },
   { key: 'terminology', label: '术语配置', icon: 'i-material-symbols:book-outline' },
-  { key: 'sql', label: 'SQL示例库', icon: 'i-material-symbols:code' },
+  { key: 'sql', label: 'SQL示例', icon: 'i-material-symbols:code' },
 ]
 
 const toggleSidebar = () => {
