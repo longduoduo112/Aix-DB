@@ -115,7 +115,7 @@ class CommonReactAgent:
         try:
             t02_answer_data = []
 
-            tools = []  # await self.client.get_tools()
+            tools = await self.client.get_tools()
 
             # 使用用户会话ID作为thread_id，如果未提供则使用默认值
             thread_id = session_id if session_id else "default_thread"

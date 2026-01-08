@@ -112,19 +112,69 @@ const SideBarItem = defineComponent({
 
 const sidebarItems = ref([
   {
-    label: '通问',
-    key: 'SystemLogo',
+    label: '数据源',
+    key: 'DatasourceManager',
     renderIcon() {
       return (
-        <div class="i-my-svg:system-logo"></div>
+        <div class="i-material-symbols:database-outline text-24"></div>
       )
     },
     onClick() {
-      router.push('/')
+      router.push({ name: 'DatasourceManager' })
     },
-    props: {
-      fill: true,
+    props: {},
+  },
+  {
+    label: '用户管理',
+    key: 'UserManager',
+    renderIcon() {
+      return (
+        <div class="i-material-symbols:person-outline text-24"></div>
+      )
     },
+    onClick() {
+      router.push({ name: 'UserManager' })
+    },
+    props: {},
+  },
+  {
+    label: '权限配置',
+    key: 'PermissionConfig',
+    renderIcon() {
+      return (
+        <div class="i-material-symbols:lock-outline text-24"></div>
+      )
+    },
+    onClick() {
+      router.push({ name: 'PermissionConfig' })
+    },
+    props: {},
+  },
+  {
+    label: '术语配置',
+    key: 'TerminologyConfig',
+    renderIcon() {
+      return (
+        <div class="i-material-symbols:book-outline text-24"></div>
+      )
+    },
+    onClick() {
+      router.push({ name: 'TerminologyConfig' })
+    },
+    props: {},
+  },
+  {
+    label: 'SQL示例库',
+    key: 'SqlExampleLibrary',
+    renderIcon() {
+      return (
+        <div class="i-material-symbols:code text-24"></div>
+      )
+    },
+    onClick() {
+      router.push({ name: 'SqlExampleLibrary' })
+    },
+    props: {},
   },
 ])
 
@@ -143,24 +193,14 @@ const avatarMenuOptions = computed(() => {
 
   const options = [
     {
-      label: '数据源管理',
-      key: 'dataSource',
-      icon: () => <div class="i-material-symbols:database-outline text-16"></div>,
-    },
-    {
-      label: '用户管理',
-      key: 'userManager',
-      icon: () => <div class="i-material-symbols:person-outline text-16"></div>,
+      label: '系统设置',
+      key: 'systemSettings',
+      icon: () => <div class="i-material-symbols:settings-outline text-16"></div>,
     },
     {
       label: '知识库管理',
       key: 'knowledgeManager',
       icon: () => <div class="i-material-symbols:library-books-outline text-16"></div>,
-    },
-    {
-      label: '大模型配置',
-      key: 'llmConfig',
-      icon: () => <div class="i-material-symbols:settings-outline text-16"></div>,
     },
     {
       label: '退出登录',
@@ -179,14 +219,9 @@ const avatarMenuOptions = computed(() => {
 const handleMenuSelect = (key: string) => {
   console.log('Dropdown clicked, role:', userStore.role)
   switch (key) {
-    case 'dataSource':
+    case 'systemSettings':
       router.push({
-        name: 'DatasourceManager',
-      })
-      break
-    case 'userManager':
-      router.push({
-        name: 'UserManager',
+        name: 'SystemSettings',
       })
       break
     case 'knowledgeManager':
@@ -289,23 +324,12 @@ const handleMenuSelect = (key: string) => {
         >
           <div
             class="flex flex-col items-center gap-2 cursor-pointer group"
-            @click="handleMenuSelect('dataSource')"
+            @click="handleMenuSelect('systemSettings')"
           >
             <div class="relative">
-              <div class="i-hugeicons:database-01 text-20 text-[#666] group-hover:text-[#333] transition-colors"></div>
-              <div class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white"></div>
+              <div class="i-material-symbols:settings-outline text-20 text-[#666] group-hover:text-[#333] transition-colors"></div>
             </div>
-            <span class="text-12 text-[#666] group-hover:text-[#333]">数据源管理</span>
-          </div>
-
-          <div
-            class="flex flex-col items-center gap-2 cursor-pointer group"
-            @click="handleMenuSelect('userManager')"
-          >
-            <div class="relative">
-              <div class="i-hugeicons:user-group text-20 text-[#666] group-hover:text-[#333] transition-colors"></div>
-            </div>
-            <span class="text-12 text-[#666] group-hover:text-[#333]">用户管理</span>
+            <span class="text-12 text-[#666] group-hover:text-[#333]">系统设置</span>
           </div>
 
           <div
@@ -316,16 +340,6 @@ const handleMenuSelect = (key: string) => {
               <div class="i-hugeicons:book-open-01 text-20 text-[#666] group-hover:text-[#333] transition-colors"></div>
             </div>
             <span class="text-12 text-[#666] group-hover:text-[#333]">知识库管理</span>
-          </div>
-
-          <div
-            class="flex flex-col items-center gap-2 cursor-pointer group"
-            @click="handleMenuSelect('llmConfig')"
-          >
-            <div class="relative">
-              <div class="i-hugeicons:cpu text-20 text-[#666] group-hover:text-[#333] transition-colors"></div>
-            </div>
-            <span class="text-12 text-[#666] group-hover:text-[#333]">大模型配置</span>
           </div>
         </div>
 

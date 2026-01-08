@@ -109,6 +109,7 @@ CREATE TABLE t_user_qa_record (
   to2_answer TEXT,
   to4_answer TEXT,
   qa_type VARCHAR(100),
+  datasource_id BIGINT,
   file_key TEXT,
   create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -116,14 +117,15 @@ CREATE TABLE t_user_qa_record (
 COMMENT ON TABLE t_user_qa_record IS '问答记录表';
 COMMENT ON COLUMN t_user_qa_record.user_id IS '用户id';
 COMMENT ON COLUMN t_user_qa_record.uuid IS '自定义id';
-COMMENT ON COLUMN t_user_qa_record.conversation_id IS 'diy/对话id';
-COMMENT ON COLUMN t_user_qa_record.message_id IS 'dify/消息id';
-COMMENT ON COLUMN t_user_qa_record.task_id IS 'dify/任务id';
+COMMENT ON COLUMN t_user_qa_record.conversation_id IS '对话id';
+COMMENT ON COLUMN t_user_qa_record.message_id IS '消息id';
+COMMENT ON COLUMN t_user_qa_record.task_id IS '任务id';
 COMMENT ON COLUMN t_user_qa_record.chat_id IS '对话id';
 COMMENT ON COLUMN t_user_qa_record.question IS '用户问题';
 COMMENT ON COLUMN t_user_qa_record.to2_answer IS '大模型答案';
 COMMENT ON COLUMN t_user_qa_record.to4_answer IS '业务数据';
 COMMENT ON COLUMN t_user_qa_record.qa_type IS '问答类型';
+COMMENT ON COLUMN t_user_qa_record.datasource_id IS '数据源ID';
 COMMENT ON COLUMN t_user_qa_record.file_key IS '文件minio/key';
 COMMENT ON COLUMN t_user_qa_record.create_time IS '创建时间';
 

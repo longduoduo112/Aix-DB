@@ -191,6 +191,8 @@ interface TableItem {
   key: string
   chat_id: string
   qa_type: string
+  datasource_id?: number
+  datasource_name?: string
 }
 const tableData = ref<TableItem[]>([])
 const tableRef = ref(null)
@@ -884,6 +886,20 @@ const handleHistoryClick = async (item: any) => {
   scrollToItem(item.uuid)
 
   onAqtiveChange(item.qa_type, item.chat_id)
+
+  // 恢复选中的数据源
+  if (item.qa_type === 'DATABASE_QA') {
+    if (item.datasource_id) {
+       const ds = datasourceList.value.find((d) => d.id === item.datasource_id)
+       if (ds) {
+           selectedDatasource.value = ds
+       } else if (item.datasource_name) {
+           selectedDatasource.value = { id: item.datasource_id, name: item.datasource_name }
+       }
+    }
+  } else {
+    selectedDatasource.value = null
+  }
 }
 </script>
 

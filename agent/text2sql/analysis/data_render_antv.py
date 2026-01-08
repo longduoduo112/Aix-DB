@@ -69,7 +69,7 @@ async def data_render_ant(state: AgentState):
     )
 
     result = await chart_agent.ainvoke(
-        {"messages": [("user", f"输入数据如下:\n<data>{result_data}</data>")]},
+        {"messages": [("user", f"输入数据如下:\n<data>{result_data.data}</data>")]},
         config={"configurable": {"thread_id": "chart-render"}},
     )
 

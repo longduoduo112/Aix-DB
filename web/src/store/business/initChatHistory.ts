@@ -76,6 +76,8 @@ interface TableItem {
   key: string
   chat_id: string
   qa_type: string
+  datasource_id?: number
+  datasource_name?: string
 }
 
 // 请求接口查询对话历史记录
@@ -132,6 +134,8 @@ export const fetchConversationHistory = async function fetchConversationHistory(
             key: chat.question.trim(),
             chat_id: chat.chat_id,
             qa_type: chat.qa_type,
+            datasource_id: chat.datasource_id,
+            datasource_name: chat.datasource_name,
           }))
 
           if (append) {

@@ -119,6 +119,7 @@ class Text2SqlAgent:
                     IntentEnum.DATABASE_QA.value[0],
                     user_token,
                     {},
+                    datasource_id,
                 )
 
         except asyncio.CancelledError:

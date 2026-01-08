@@ -46,6 +46,30 @@ const childrenRoutes: Array<RouteRecordRaw> = [
     component: () => import('@/views/LLMConfig.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: 'permission-config',
+    name: 'PermissionConfig',
+    component: () => import('@/views/PermissionConfig.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'terminology-config',
+    name: 'TerminologyConfig',
+    component: () => import('@/views/TerminologyConfig.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'sql-example-library',
+    name: 'SqlExampleLibrary',
+    component: () => import('@/views/SqlExampleLibrary.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: 'system-settings',
+    name: 'SystemSettings',
+    component: () => import('@/views/SystemSettings.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 export default childrenRoutes

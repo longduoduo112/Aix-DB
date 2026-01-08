@@ -247,6 +247,7 @@ async def add_user_record(
     qa_type: str,
     user_token: str,
     file_list: dict[str, Any] = None,
+    datasource_id: int = None,
 ):
     """
     新增用户问答记录
@@ -269,8 +270,8 @@ async def add_user_record(
         # 3. 插入数据库
         insert_sql = """
             INSERT INTO t_user_qa_record
-            (uuid, user_id, chat_id, question, to2_answer,to4_answer, qa_type,file_key)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            (uuid, user_id, chat_id, question, to2_answer,to4_answer, qa_type,file_key, datasource_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         insert_params = (
             uuid_str,
@@ -281,6 +282,7 @@ async def add_user_record(
             json.dumps(to4_answer, ensure_ascii=False),
             qa_type,
             json.dumps(file_list, ensure_ascii=False) if file_list and len(file_list) > 0 else "",
+            datasource_id,
         )
 
         execute_sql_update(sql=insert_sql, params=insert_params)
@@ -348,10 +350,22 @@ async def query_user_record(user_id, page, size, search_text, chat_id):
         total_count = total_count_result[0]["count"] if total_count_result else 0
         total_pages = (total_count + size - 1) // size
 
-        records_sql = f"SELECT * FROM t_user_qa_record"
+        records_sql = f"SELECT t.*, d.name as datasource_name FROM t_user_qa_record t LEFT JOIN t_datasource d ON t.datasource_id = d.id"
         if conditions:
-            records_sql += " WHERE " + " AND ".join(conditions)
-        records_sql += f" ORDER BY id ASC LIMIT {size} OFFSET {offset}"
+            # Note: We need to adjust column references if they are ambiguous, but here conditions are simple
+            # However, since we aliased t_user_qa_record as t, we should probably update conditions or just use the table name in WHERE if not ambiguous
+            # Actually, the conditions constructed earlier use simple column names. 
+            # To be safe, let's prefix them with 't.' in the WHERE clause or just rely on them being unique enough (except id which is in both)
+            # The conditions construction was: conditions.append(f"chat_id = '{chat_id}'") etc.
+            # To avoid ambiguity with 'id' or 'name' (though name is in datasource), let's just append WHERE clause.
+            # But wait, conditions uses `question LIKE` and `user_id =`.
+            # `chat_id` is in t_user_qa_record. `datasource_id` is in t_user_qa_record.
+            # `id` is in both. `name` is in datasource.
+            # The conditions list is built before.
+            # Let's rebuild conditions with 't.' prefix or just use table alias in query.
+            where_clause = " WHERE " + " AND ".join([f"t.{c}" if "id" in c or "question" in c or "chat_id" in c or "user_id" in c else c for c in conditions])
+            records_sql += where_clause
+        records_sql += f" ORDER BY t.id ASC LIMIT {size} OFFSET {offset}"
         records = execute_sql_dict(records_sql)
     else:
         # 如果chat_id为空，则需要去重，根据chat_id取id最小的记录
@@ -373,13 +387,14 @@ async def query_user_record(user_id, page, size, search_text, chat_id):
 
         # 查询去重后的记录，根据chat_id分组并取id最小的记录
         records_sql = f"""
-            SELECT t.* FROM t_user_qa_record t
+            SELECT t.*, d.name as datasource_name FROM t_user_qa_record t
             INNER JOIN (
                 SELECT chat_id, MIN(id) as min_id 
                 FROM t_user_qa_record 
                 {base_condition}
                 GROUP BY chat_id
             ) tm ON t.chat_id = tm.chat_id AND t.id = tm.min_id
+            LEFT JOIN t_datasource d ON t.datasource_id = d.id
             ORDER BY t.id DESC 
             LIMIT {size} OFFSET {offset}
         """
