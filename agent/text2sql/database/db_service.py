@@ -626,37 +626,3 @@ class DatabaseService:
             logger.error(error_msg, exc_info=True)
             state["execution_result"] = ExecutionResult(success=False, error=str(e))
         return state
-
-    @staticmethod
-    def execute_correction_sql(state: AgentState) -> AgentState:
-        """
-        执行修正后的 SQL 语句。
-        """
-        correction_result = state.get("correction_result")
-        if not correction_result or not hasattr(correction_result, "corrected_sql_query"):
-            error_msg = "无修正后的 SQL 可执行"
-            logger.warning(error_msg)
-            state["execution_result"] = ExecutionResult(success=False, error=error_msg)
-            return state
-
-        corrected_sql = getattr(correction_result, "corrected_sql_query", "").strip()
-        if not corrected_sql:
-            error_msg = "修正后的 SQL 为空"
-            logger.warning(error_msg)
-            state["execution_result"] = ExecutionResult(success=False, error=error_msg)
-            return state
-
-        logger.info("🔧 执行修正后的 SQL 语句")
-        try:
-            with db_pool.get_session() as session:
-                result = session.execute(text(corrected_sql))
-                result_data = result.fetchall()
-                columns = result.keys()
-                frame = pd.DataFrame(result_data, columns=columns)
-                state["execution_result"] = ExecutionResult(success=True, data=frame.to_dict(orient="records"))
-                logger.info(f"✅ 修正 SQL 执行成功，返回 {len(result_data)} 条记录")
-        except Exception as e:
-            error_msg = f"执行修正 SQL 失败: {e}"
-            logger.error(error_msg, exc_info=True)
-            state["execution_result"] = ExecutionResult(success=False, error=str(e))
-        return state

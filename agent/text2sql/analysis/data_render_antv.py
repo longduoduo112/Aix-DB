@@ -558,26 +558,9 @@ async def data_render_ant(state: AgentState):
         chart_config = state.get("chart_config", {})
         template_code = "temp01"  # 默认为表格
         
-        # #region agent log
-        import json
-        log_file = "/Users/lihuan/python-workspace/sanic-web/.cursor/debug.log"
-        try:
-            with open(log_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps({"location": "data_render_antv.py:304", "message": "chart_type and chart_config", "data": {"chart_type": chart_type, "chart_config": chart_config is not None}, "timestamp": int(__import__("time").time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}) + "\n")
-        except:
-            pass
-        # #endregion
-        
         # 优先从 chart_config 中获取类型
         if chart_config and isinstance(chart_config, dict):
             chart_type_from_config = chart_config.get("type", "").lower()
-            # #region agent log
-            try:
-                with open(log_file, "a", encoding="utf-8") as f:
-                    f.write(json.dumps({"location": "data_render_antv.py:312", "message": "chart_config type found", "data": {"chart_type_from_config": chart_type_from_config}, "timestamp": int(__import__("time").time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}) + "\n")
-            except:
-                pass
-            # #endregion
             if chart_type_from_config == "pie":
                 template_code = "temp02"
             elif chart_type_from_config == "bar" or chart_type_from_config == "column":
@@ -587,13 +570,6 @@ async def data_render_ant(state: AgentState):
         # 其次从 chart_type 中推断
         elif chart_type:
             chart_type_lower = chart_type.lower()
-            # #region agent log
-            try:
-                with open(log_file, "a", encoding="utf-8") as f:
-                    f.write(json.dumps({"location": "data_render_antv.py:323", "message": "chart_type found", "data": {"chart_type_lower": chart_type_lower}, "timestamp": int(__import__("time").time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}) + "\n")
-            except:
-                pass
-            # #endregion
             if chart_type_lower == "table":
                 template_code = "temp01"
             elif chart_type_lower == "pie":
@@ -602,15 +578,6 @@ async def data_render_ant(state: AgentState):
                 template_code = "temp03"
             elif chart_type_lower == "line":
                 template_code = "temp04"
-        
-        # 如果 chart_config 和 chart_type 都没有，默认使用表格 temp01（已在上面设置）
-        # #region agent log
-        try:
-            with open(log_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps({"location": "data_render_antv.py:337", "message": "template_code determined", "data": {"template_code": template_code, "data_count": len(formatted_data), "columns_count": len(column_names_chinese)}, "timestamp": int(__import__("time").time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}) + "\n")
-        except:
-            pass
-        # #endregion
         
         # 构建返回数据格式
         # 按照当前项目协议,返回格式: {"template_code": "...", "columns": [...], "data": [...]}

@@ -344,4 +344,44 @@ class PromptBuilder:
         except Exception as e:
             logger.error(f"Failed to build dynamic SQL prompt: {e}", exc_info=True)
             raise
+    
+    def build_summarizer_prompt(
+        self,
+        data_result: str,
+        user_query: str,
+        current_time: Optional[str] = None,
+    ) -> str:
+        """
+        构建数据总结提示词
+        
+        Args:
+            data_result: 数据结果（JSON格式字符串）
+            user_query: 用户问题
+            current_time: 当前时间（格式：YYYY-MM-DD HH:MM:SS），如果为None则自动生成
+        
+        Returns:
+            完整的提示词字符串
+        """
+        try:
+            if current_time is None:
+                current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            summarizer_template = self.base_template['template']['summarizer']
+            
+            # 构建系统提示词
+            system_prompt = summarizer_template['system']
+            
+            # 构建用户提示词
+            user_prompt = summarizer_template['user'].format(
+                data_result=data_result,
+                user_query=user_query,
+                current_time=current_time,
+            )
+            
+            # 返回完整的提示词（系统提示词 + 用户提示词）
+            return f"{system_prompt}\n\n{user_prompt}"
+            
+        except Exception as e:
+            logger.error(f"Failed to build summarizer prompt: {e}", exc_info=True)
+            raise
 

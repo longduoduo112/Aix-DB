@@ -456,15 +456,43 @@ const renderChart = async () => {
       const xCol = chartColumns[0]
       const yCol = chartColumns[1]
       
-      const lineData = chartDataValue.map((item: any) => ({
+      // 处理数据并检测是否为日期格式
+      let lineData = chartDataValue.map((item: any) => ({
         name: item[xCol] || '',
         value: typeof item[yCol] === 'number' ? item[yCol] : Number.parseFloat(item[yCol] || '0'),
+        originalName: item[xCol] || '', // 保存原始值用于排序
       })).filter((item: any) => !Number.isNaN(item.value))
+
+      // 检测第一个数据点是否为日期格式
+      const isDateFormat = lineData.length > 0 && /^\d{4}-\d{2}-\d{2}/.test(lineData[0].originalName)
+      
+      // 如果是日期格式，按日期排序
+      if (isDateFormat) {
+        lineData = lineData.sort((a: any, b: any) => {
+          const dateA = new Date(a.originalName).getTime()
+          const dateB = new Date(b.originalName).getTime()
+          return dateA - dateB
+        })
+      }
+
+      // 移除临时字段
+      lineData = lineData.map((item: any) => ({
+        name: item.name,
+        value: item.value,
+      }))
 
       const config: LineOptions = {
         data: lineData,
         xField: 'name',
         yField: 'value',
+        meta: {
+          name: {
+            type: 'cat', // 分类类型，但数据已排序
+          },
+          value: {
+            type: 'linear', // y 轴为线性数值
+          },
+        },
         color: '#667eea',
         point: {
           size: 6,
@@ -498,11 +526,40 @@ const renderChart = async () => {
           },
         },
         xAxis: {
+          tickCount: lineData.length > 20 ? 15 : undefined, // 数据点多时限制显示的刻度数量
           label: {
-            autoRotate: false,
+            autoRotate: lineData.length > 15, // 数据点多时自动旋转
+            rotate: lineData.length > 15 ? -45 : 0, // 旋转角度
+            autoHide: false, // 不自动隐藏，确保标签显示
+            autoEllipsis: true, // 自动省略过长文本
             style: {
               fontSize: 12,
               fill: '#666',
+            },
+            formatter: (text: string) => {
+              if (!text) return ''
+              // 如果是日期格式，尝试格式化
+              if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
+                // 日期格式：2024-01-05 -> 01-05
+                const date = new Date(text)
+                if (!isNaN(date.getTime())) {
+                  const month = String(date.getMonth() + 1).padStart(2, '0')
+                  const day = String(date.getDate()).padStart(2, '0')
+                  return `${month}-${day}`
+                }
+              }
+              // 如果文本过长，截断
+              const maxLength = 10
+              if (text.length > maxLength) {
+                return text.slice(0, maxLength) + '...'
+              }
+              return text
+            },
+          },
+          tickLine: {
+            style: {
+              stroke: '#e0e0e0',
+              lineWidth: 1,
             },
           },
           line: {
@@ -603,18 +660,56 @@ const renderChart = async () => {
         },
         interactions: [
           { type: 'element-active' },
-          { type: 'marker-active' },
         ],
         animation: {
           appear: {
-            animation: 'path-in',
-            duration: 1000,
+            animation: 'fade-in',
+            duration: 800,
           },
           update: {
-            animation: 'path-in',
+            animation: 'fade-in',
             duration: 400,
           },
         },
+        // 当数据点较多时，添加 x 轴滑块
+        slider: lineData.length > 15 ? {
+          start: 0,
+          end: 1,
+          height: 24,
+          trendCfg: {
+            areaStyle: {
+              fill: 'rgba(102, 126, 234, 0.2)',
+            },
+            lineStyle: {
+              stroke: '#667eea',
+              lineWidth: 2,
+            },
+            point: {
+              visible: false,
+            },
+          },
+          handlerStyle: {
+            fill: '#667eea',
+            stroke: '#667eea',
+            highLightFill: '#764ba2',
+          },
+          textStyle: {
+            fill: '#666',
+            fontSize: 12,
+          },
+          formatter: (text: string) => {
+            // 如果是日期格式，格式化显示
+            if (text && /^\d{4}-\d{2}-\d{2}/.test(text)) {
+              const date = new Date(text)
+              if (!isNaN(date.getTime())) {
+                const month = String(date.getMonth() + 1).padStart(2, '0')
+                const day = String(date.getDate()).padStart(2, '0')
+                return `${month}-${day}`
+              }
+            }
+            return text
+          },
+        } : undefined,
       }
 
       chartInstance = new Line(container, config)

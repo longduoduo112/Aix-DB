@@ -317,6 +317,8 @@ const showText = () => {
         emit('chartready')
         readerLoading.value = false
         isCompleted.value = true
+        // 新对话完成后，恢复推荐问题按钮可点击状态
+        businessStore.set_suggested_disabled(false)
         nextTick(() => {
           readIsOver.value = false
         })
@@ -405,7 +407,32 @@ const belittleFeedback = () => {
 
 // 重新提问
 const handleRecycleAquestion = function () {
+  // 如果正在等待后端对话结束，只滚动到底部，不处理其他逻辑
+  if (isWaitingForBackendResponse.value) {
+    nextTick(() => {
+      scrollToBottom()
+      parentScollBottomMethod.value()
+    })
+    return
+  }
+  
+  // 如果已禁用，直接返回
+  if (businessStore.suggestedDisabled) {
+    return
+  }
+  
+  // 禁用所有推荐问题按钮（全局状态，影响所有历史对话）
+  businessStore.set_suggested_disabled(true)
+  
+  // 触发重新生成事件
   emit('recycleQa')
+  
+  // 自动滚动到底部
+  nextTick(() => {
+    scrollToBottom()
+    // 同时调用父组件的滚动方法
+    parentScollBottomMethod.value()
+  })
 }
 
 // 监控表格图表是否渲染完毕
@@ -417,13 +444,68 @@ const onChartCompletedReader = function () {
   emit('chartready')
 }
 
+/**
+ * 统一判断：是否正在等待后端对话结束
+ * 如果正在等待，则不应该处理用户操作
+ */
+const isWaitingForBackendResponse = computed(() => {
+  // 优先级1：如果对话已完成，不应该被认为是等待后端响应
+  // 这是最优先的判断，因为一旦完成就应该允许重新生成
+  if (isCompleted.value) {
+    return false
+  }
+  
+  // 优先级2：对于历史对话，如果没有 reader，不应该被认为是等待后端响应
+  if (props.isView && !props.reader) {
+    return false
+  }
+  
+  // 优先级3：如果正在加载中（readerLoading），说明正在等待
+  if (readerLoading.value) {
+    return true
+  }
+  
+  // 优先级4：如果有 reader 存在，说明正在等待后端响应
+  // 无论 readIsOver 状态如何，只要 reader 存在且对话未完成，就认为是等待中
+  if (props.reader) {
+    return true
+  }
+  
+  // 其他情况：不在等待中
+  return false
+})
+
 // 推荐问题点击事件
 const onSuggested = function (index: number) {
+  // 如果正在等待后端对话结束，只滚动到底部，不处理其他逻辑
+  if (isWaitingForBackendResponse.value) {
+    nextTick(() => {
+      scrollToBottom()
+      parentScollBottomMethod.value()
+    })
+    return
+  }
+  
+  // 如果已禁用，直接返回
+  if (businessStore.suggestedDisabled) {
+    return
+  }
+  
+  // 禁用所有推荐问题按钮（全局状态，影响所有历史对话）
+  businessStore.set_suggested_disabled(true)
+  
   // 优先使用 props.chartData（历史对话），否则使用全局 store（实时对话）
   const chartData = props.chartData || businessStore.writerList?.data
   const recommendedQuestions = chartData?.recommended_questions || []
   if (recommendedQuestions && recommendedQuestions.length > index) {
     emit('suggested', recommendedQuestions[index])
+    
+    // 自动滚动到底部
+    nextTick(() => {
+      scrollToBottom()
+      // 同时调用父组件的滚动方法
+      parentScollBottomMethod.value()
+    })
   }
 }
 
@@ -522,15 +604,15 @@ const currentQaOption = computed(() => {
           </div>
           <div
             v-if="recommendedQuestions.length > 0 && isCompleted"
-            class="w-full mt-4"
+            class="w-full"
             :style="{
-              'background-color': '#f6f7fb',
-              'padding': '16px 0',
               'margin-top': currentChartType ? '16px' : '0',
+              'margin-bottom': '16px',
             }"
           >
             <SuggestedView
               :labels="recommendedQuestions"
+              :disabled="businessStore.suggestedDisabled"
               @suggested="onSuggested"
             />
           </div>

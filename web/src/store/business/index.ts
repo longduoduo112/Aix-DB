@@ -11,6 +11,7 @@ export interface BusinessState {
     parse_file_key: string
     file_size: string
   }[]
+  suggestedDisabled: boolean
 }
 
 export const useBusinessStore = defineStore('business-store', {
@@ -23,6 +24,8 @@ export const useBusinessStore = defineStore('business-store', {
       file_list: [],
       // 全局保存dify 任务id
       task_id: '',
+      // 全局推荐问题禁用状态
+      suggestedDisabled: false,
     }
   },
   actions: {
@@ -61,6 +64,10 @@ export const useBusinessStore = defineStore('business-store', {
     },
     clear_task_id() {
       this.task_id = ''
+    },
+    // 设置推荐问题禁用状态
+    set_suggested_disabled(disabled: boolean) {
+      this.suggestedDisabled = disabled
     },
     /**
      * Event Stream 调用大模型python服务接口

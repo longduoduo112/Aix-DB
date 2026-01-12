@@ -50,6 +50,10 @@ const isLoadingConversationHistory = ref(false)
 const isLoadingMoreConversationHistory = ref(false)
 // 当前已加载的最大页码（用于判断是否还有更多页面）
 const conversationHistoryCurrentLoadedPage = ref(1)
+// 已加载的页面集合，用于避免重复加载
+const loadedPages = ref<Set<number>>(new Set())
+// 已加载的最小页码（用于向前加载时判断）
+const conversationHistoryMinLoadedPage = ref(1)
 const hasMoreConversationHistory = computed(
   () => conversationHistoryCurrentLoadedPage.value < conversationHistoryTotalPages.value,
 )
@@ -57,6 +61,10 @@ const hasMoreConversationHistory = computed(
 // 管理对话
 const isModalOpen = ref(false)
 function openModal() {
+  // 对话进行中时禁用
+  if (stylizingLoading.value) {
+    return
+  }
   isModalOpen.value = true
 }
 // 模态框关闭
@@ -76,6 +84,10 @@ function handleModalClose(value) {
 
 // 新建对话
 function newChat() {
+  // 对话进行中时禁用
+  if (stylizingLoading.value) {
+    return
+  }
   backgroundColorVariable.value = '#ffffff'
 
   if (showDefaultPage.value) {
@@ -323,6 +335,15 @@ const handleCreateStylized = async (
   // 设置查看历史消息标识为false
   isView.value = false
 
+  // 如果之前是在查看历史对话，现在输入新问题，需要清除历史对话的分页状态
+  // 因为新问题会产生新的对话数据，不应该再触发历史对话的分页加载
+  if (currentConversationChatId.value) {
+    currentConversationChatId.value = null
+    conversationHistoryPage.value = 1
+    conversationHistoryTotalPages.value = 1
+    conversationHistoryCurrentLoadedPage.value = 1
+  }
+
   // 清空推荐列表
   suggested_array.value = []
 
@@ -404,9 +425,20 @@ const handleCreateStylized = async (
 
   // 存储该轮用户对话消息
   if (textContent) {
+    const newChatId = uuids.value[currentQaType]
+    
+    // 如果之前是在查看历史对话，检查新数据的 chat_id 是否与历史对话的 chat_id 匹配
+    // 如果不匹配，说明是新对话，应该清除历史对话的分页状态
+    if (currentConversationChatId.value && newChatId !== currentConversationChatId.value) {
+      currentConversationChatId.value = null
+      conversationHistoryPage.value = 1
+      conversationHistoryTotalPages.value = 1
+      conversationHistoryCurrentLoadedPage.value = 1
+    }
+    
     conversationItems.value.push({
       uuid: uuid_str,
-      chat_id: uuids.value[currentQaType],
+      chat_id: newChatId,
       qa_type: currentQaType,
       question: textContent,
       file_key: upload_file_list,
@@ -479,14 +511,29 @@ const handleCreateStylized = async (
     currentRenderIndex.value = assistantIndex
 
     // 监听 writerList 变化，将数据保存到对应的对话项中
+    // 注意：不要过早停止 watcher，因为推荐问题可能在图表数据之后到达
     const stopWatcher = watch(
       () => businessStore.writerList,
       (newWriterList) => {
         if (newWriterList?.dataType === 't04' && newWriterList?.data) {
           if (assistantIndex < conversationItems.value.length && conversationItems.value[assistantIndex].role === 'assistant') {
-            conversationItems.value[assistantIndex].chartData = newWriterList.data
-            // 数据保存后停止监听
-            stopWatcher()
+            // 合并数据：如果已有 chartData，则合并推荐问题；否则直接赋值
+            const currentChartData = conversationItems.value[assistantIndex].chartData
+            if (currentChartData && newWriterList.data.recommended_questions) {
+              // 如果已有 chartData 且新数据包含推荐问题，则合并
+              conversationItems.value[assistantIndex].chartData = {
+                ...currentChartData,
+                recommended_questions: newWriterList.data.recommended_questions
+              }
+            } else {
+              // 否则直接赋值（第一次或没有推荐问题时）
+              conversationItems.value[assistantIndex].chartData = newWriterList.data
+            }
+            // 只有在数据完整（包含推荐问题或确定不会有推荐问题）时才停止监听
+            // 如果新数据包含推荐问题，说明数据已完整，可以停止监听
+            if (newWriterList.data.recommended_questions && newWriterList.data.recommended_questions.length > 0) {
+              stopWatcher()
+            }
           }
         }
       },
@@ -681,6 +728,10 @@ const searchText = ref('')
 const searchChatRef = useTemplateRef('searchChatRef')
 const isFocusSearchChat = ref(false)
 const onFocusSearchChat = () => {
+  // 对话进行中时禁用
+  if (stylizingLoading.value) {
+    return
+  }
   if (isFocusSearchChat.value) {
     isFocusSearchChat.value = false
     searchText.value = ''
@@ -844,6 +895,11 @@ onBeforeUnmount(() => {
   if (messagesContainer.value) {
     messagesContainer.value.removeEventListener('scroll', handleScroll)
   }
+  // 清除滚动防抖定时器
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
+    scrollTimer = null
+  }
 })
 
 // ============================== 文件上传 ============================//
@@ -918,22 +974,55 @@ const loadConversationHistory = async (item: any, reset: boolean = true, loadOld
     conversationHistoryPage.value = 1
     conversationHistoryTotalPages.value = 1
     conversationHistoryCurrentLoadedPage.value = 1
+    conversationHistoryMinLoadedPage.value = 1
     conversationItems.value = []
     currentConversationChatId.value = item.chat_id
+    loadedPages.value.clear()
   }
 
   let pageToLoad = conversationHistoryPage.value
   const append = !reset && !loadOlder // 向后加载时append=true，向前加载时append=false
 
   // 如果是加载更旧的消息，需要加载前面的页面
-  if (loadOlder && conversationHistoryPage.value > 1) {
-    pageToLoad = conversationHistoryPage.value - 1
+  if (loadOlder) {
+    // 计算要加载的页码：当前最小已加载页码 - 1
+    pageToLoad = conversationHistoryMinLoadedPage.value - 1
+    // 如果页码小于1或已经加载过，则不加载
+    if (pageToLoad < 1 || loadedPages.value.has(pageToLoad)) {
+      return
+    }
+  } else if (!reset) {
+    // 向后加载时，检查是否已经加载过
+    if (loadedPages.value.has(pageToLoad)) {
+      return
+    }
   }
-  // 向后加载时，使用 conversationHistoryPage.value（即下一页）
-  // 注意：conversationHistoryPage.value 表示"下一个要加载的页码"
 
+  // 检查是否已经加载过（防止重复加载）
+  if (loadedPages.value.has(pageToLoad)) {
+    return
+  }
+
+  // 记录即将加载的页面（在加载前标记，防止并发加载同一页）
+  loadedPages.value.add(pageToLoad)
+
+  // 保存滚动位置（用于从前面插入数据时保持位置）
+  let previousScrollHeight = 0
+  let previousScrollTop = 0
+  if (loadOlder && messagesContainer.value) {
+    previousScrollHeight = messagesContainer.value.scrollHeight
+    previousScrollTop = messagesContainer.value.scrollTop
+  }
+
+  // 提前设置加载状态，使用 requestAnimationFrame 优化渲染
   if (!reset && !loadOlder) {
-    isLoadingMoreConversationHistory.value = true
+    requestAnimationFrame(() => {
+      isLoadingMoreConversationHistory.value = true
+    })
+  } else if (!reset && loadOlder) {
+    requestAnimationFrame(() => {
+      isLoadingConversationHistory.value = true
+    })
   } else {
     isLoadingConversationHistory.value = true
   }
@@ -954,12 +1043,9 @@ const loadConversationHistory = async (item: any, reset: boolean = true, loadOld
     if (meta) {
       conversationHistoryTotalPages.value = meta.totalPages
       if (loadOlder) {
-        // 加载更旧的页面时，更新 conversationHistoryPage 为已加载的页码
+        // 加载更旧的页面时，更新最小已加载页码
+        conversationHistoryMinLoadedPage.value = pageToLoad
         conversationHistoryPage.value = pageToLoad
-        // 加载更旧的页面时，更新已加载的最大页码
-        if (pageToLoad < conversationHistoryCurrentLoadedPage.value) {
-          conversationHistoryCurrentLoadedPage.value = pageToLoad
-        }
       } else {
         // 加载更新的页面时，确保 conversationHistoryPage 不超过 totalPages
         const nextPage = meta.currentPage + 1
@@ -969,40 +1055,97 @@ const loadConversationHistory = async (item: any, reset: boolean = true, loadOld
           conversationHistoryCurrentLoadedPage.value = meta.currentPage
         }
       }
+
+      // 从前面插入数据后，恢复滚动位置
+      if (loadOlder && messagesContainer.value) {
+        // 使用双重 nextTick 和 requestAnimationFrame 确保 DOM 完全更新
+        await nextTick()
+        await nextTick()
+        requestAnimationFrame(() => {
+          if (messagesContainer.value) {
+            const newScrollHeight = messagesContainer.value.scrollHeight
+            const heightDifference = newScrollHeight - previousScrollHeight
+            messagesContainer.value.scrollTop = previousScrollTop + heightDifference
+          }
+        })
+      }
     }
   } catch (error) {
     console.error('加载对话历史失败:', error)
     window.$ModalMessage.error('加载对话历史失败，请重试')
+    // 加载失败时，从已加载页面集合中移除
+    loadedPages.value.delete(pageToLoad)
   } finally {
-    isLoadingConversationHistory.value = false
-    isLoadingMoreConversationHistory.value = false
+    // 使用 requestAnimationFrame 延迟清除加载状态，确保 UI 平滑过渡
+    requestAnimationFrame(() => {
+      isLoadingConversationHistory.value = false
+      isLoadingMoreConversationHistory.value = false
+    })
   }
 }
 
 // 对话内容区域滚动加载更多（滚动到顶部时加载更旧的消息，滚动到底部时加载更新的消息）
+// 添加防抖，避免频繁触发
+let scrollTimer: NodeJS.Timeout | null = null
 const handleConversationScroll = () => {
-  if (!messagesContainer.value || !currentConversationChatId.value || isLoadingMoreConversationHistory.value || isLoadingConversationHistory.value) {
+  if (!messagesContainer.value || !currentConversationChatId.value) {
+    return
+  }
+  
+  // 如果正在加载，直接返回，但允许检查滚动位置以提前显示加载状态
+  if (isLoadingMoreConversationHistory.value || isLoadingConversationHistory.value) {
     return
   }
   
   const el = messagesContainer.value
-  const isNearTop = el.scrollTop <= 50 // 滚动到顶部附近时加载更旧的消息
-  const isNearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 10 // 滚动到底部附近时加载更新的消息
+  const scrollTop = el.scrollTop
+  const scrollHeight = el.scrollHeight
+  const clientHeight = el.clientHeight
   
-  const currentItem = tableData.value.find(item => item.chat_id === currentConversationChatId.value)
-  if (!currentItem) {
-    return
+  // 使用更严格的触发条件，避免在边界附近频繁触发
+  const isNearTop = scrollTop <= 100 // 滚动到顶部附近时加载更旧的消息（阈值增大）
+  const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50 // 滚动到底部附近时加载更新的消息（阈值增大）
+  
+  // 防抖处理：清除之前的定时器
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
   }
   
-  // 如果还有更旧的页面，加载更旧的页面
-  // 修复：只有在 conversationHistoryPage > 1 且 conversationHistoryCurrentLoadedPage > 1 时才加载更旧的页面
-  if (isNearTop && conversationHistoryPage.value > 1 && conversationHistoryCurrentLoadedPage.value > 1) {
-    loadConversationHistory(currentItem, false, true) // loadOlder=true，加载更旧的页面
-  }
-  // 如果还有更新的页面，加载更新的页面
-  else if (isNearBottom && hasMoreConversationHistory.value) {
-    loadConversationHistory(currentItem, false, false) // loadOlder=false，加载更新的页面（向后追加）
-  }
+  scrollTimer = setTimeout(() => {
+    if (!messagesContainer.value || !currentConversationChatId.value) {
+      return
+    }
+    
+    // 检查当前对话的 chat_id 是否与 currentConversationChatId 匹配
+    // 如果 conversationItems 中有数据，检查最新的 chat_id 是否匹配
+    // 如果不匹配，说明是新对话，不应该触发历史对话的分页加载
+    if (conversationItems.value.length > 0) {
+      const latestChatId = conversationItems.value[conversationItems.value.length - 1]?.chat_id
+      if (latestChatId && latestChatId !== currentConversationChatId.value) {
+        // 当前对话的 chat_id 与历史对话的 chat_id 不匹配，说明是新对话
+        // 清除历史对话的分页状态，避免错误触发分页
+        currentConversationChatId.value = null
+        return
+      }
+    }
+    
+    const currentItem = tableData.value.find(item => item.chat_id === currentConversationChatId.value)
+    if (!currentItem) {
+      return
+    }
+    
+    // 如果还有更旧的页面，加载更旧的页面
+    // 检查：最小已加载页码大于1，且不在加载中
+    if (isNearTop && conversationHistoryMinLoadedPage.value > 1) {
+      loadConversationHistory(currentItem, false, true) // loadOlder=true，加载更旧的页面
+    }
+    // 如果还有更新的页面，加载更新的页面
+    else if (isNearBottom && hasMoreConversationHistory.value) {
+      loadConversationHistory(currentItem, false, false) // loadOlder=false，加载更新的页面（向后追加）
+    }
+    
+    scrollTimer = null
+  }, 100) // 100ms 防抖延迟，减少延迟提升响应速度
 }
 
 // Handle History Item Click (Replaces rowProps)
@@ -1073,7 +1216,8 @@ const handleHistoryClick = async (item: any) => {
             </div>
             <div class="header-actions flex items-center gap-5">
               <div
-                class="action-icon i-hugeicons:search-01 text-24 text-[#8A8A8A] hover:text-[#333] cursor-pointer mr-4"
+                class="action-icon i-hugeicons:search-01 text-24 mr-4"
+                :class="stylizingLoading ? 'text-[#CCCCCC] cursor-not-allowed' : 'text-[#8A8A8A] hover:text-[#333] cursor-pointer'"
                 @click="onFocusSearchChat"
               ></div>
               <div
@@ -1120,7 +1264,8 @@ const handleHistoryClick = async (item: any) => {
           <div class="px-6 py-4 flex justify-between items-center mt-10 ml-10 mb-5">
             <span class="text-[#7A7A7A] text-[13px] font-semibold tracking-wide history-label">最近对话</span>
             <div
-              class="i-hugeicons:settings-04 text-18 text-[#7A7A7A] cursor-pointer hover:text-gray-600"
+              class="i-hugeicons:settings-04 text-18"
+              :class="stylizingLoading ? 'text-[#CCCCCC] cursor-not-allowed' : 'text-[#7A7A7A] cursor-pointer hover:text-gray-600'"
               @click="openModal"
             ></div>
           </div>
@@ -1205,7 +1350,8 @@ const handleHistoryClick = async (item: any) => {
                   @click="collapsed = false"
                 ></div>
                 <div
-                  class="i-hugeicons:comment-add-01 text-20 text-[#4A4A4A] cursor-pointer hover:text-[#111]"
+                  class="i-hugeicons:comment-add-01 text-20"
+                  :class="stylizingLoading ? 'text-[#CCCCCC] cursor-not-allowed' : 'text-[#4A4A4A] cursor-pointer hover:text-[#111]'"
                   @click="newChat"
                 ></div>
               </div>
@@ -1347,6 +1493,32 @@ const handleHistoryClick = async (item: any) => {
                 </div>
               </div>
             </template>
+
+            <!-- 底部加载更多提示（滚动到底部加载时显示） -->
+            <transition name="fade">
+              <div
+                v-if="isView && isLoadingMoreConversationHistory"
+                class="flex justify-center items-center py-2 conversation-loading-indicator"
+              >
+                <div class="flex items-center gap-2 text-[#999] text-[13px]">
+                  <div class="i-svg-spinners:dots-scale-middle text-14 text-[#7E6BF2]"></div>
+                  <span>加载更多...</span>
+                </div>
+              </div>
+            </transition>
+
+            <!-- 顶部加载更旧消息提示（滚动到顶部加载时显示） -->
+            <transition name="fade">
+              <div
+                v-if="isView && isLoadingConversationHistory && conversationHistoryMinLoadedPage.value > 1"
+                class="flex justify-center items-center py-2 conversation-loading-indicator"
+              >
+                <div class="flex items-center gap-2 text-[#999] text-[13px]">
+                  <div class="i-svg-spinners:dots-scale-middle text-14 text-[#7E6BF2]"></div>
+                  <span>加载更早的消息...</span>
+                </div>
+              </div>
+            </transition>
 
             <div
               v-if="!isInit && !stylizingLoading"
@@ -2177,6 +2349,21 @@ const handleHistoryClick = async (item: any) => {
 
   :deep(.n-input__state-border) {
     border-radius: 8px !important;
+  }
+}
+
+/* 对话历史加载提示样式 - 轻量且平滑 */
+.conversation-loading-indicator {
+  animation: fadeIn 0.2s ease-in;
+  will-change: opacity;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 </style>

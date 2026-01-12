@@ -47,7 +47,6 @@ def create_graph(datasource_id: int = None):
 
     graph.add_node("datasource_selector", datasource_selector)
     graph.add_node("schema_inspector", db_service.get_table_schema)
-    # graph.add_node("llm_reasoning", create_reasoning_steps)
     graph.add_node("table_relationship", get_table_relationship)
     graph.add_node("sql_generator", sql_generate)
     graph.add_node("permission_filter", permission_filter_injector)
@@ -67,7 +66,6 @@ def create_graph(datasource_id: int = None):
         {END: END, "schema_inspector": "schema_inspector"},
     )
     
-    # graph.add_edge("schema_inspector", "llm_reasoning")
     graph.add_edge("schema_inspector", "table_relationship")
     graph.add_edge("table_relationship", "sql_generator")
     graph.add_edge("sql_generator", "permission_filter")

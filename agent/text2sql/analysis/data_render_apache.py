@@ -28,7 +28,6 @@ def data_render_apache(state: AgentState) -> dict:
     :return: 包含图表数据的字典
     """
     table_schema_info = state.get("db_info", {})
-    # sql_reasoning = state.get("sql_reasoning", "")
     generated_sql = state.get("generated_sql", "")
     data_result: ExecutionResult = state.get("execution_result")
 
