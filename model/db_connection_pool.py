@@ -47,7 +47,7 @@ class DBConnectionPool:
                 pool_recycle=3600,  # 连接回收时间（秒），避免长时间连接失效
                 pool_timeout=30,  # 连接池等待超时时间（秒）
                 pool_pre_ping=True,  # 启用连接预检测，确保连接有效性
-                echo=True,  # 是否打印SQL语句，用于调试
+                echo=False,  # 是否打印SQL语句，用于调试
             )
             self.SessionLocal = sessionmaker(bind=self.engine)
             self.Base = Base

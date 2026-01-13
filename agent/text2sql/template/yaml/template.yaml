@@ -22,7 +22,7 @@ template:
         <title>数据量限制策略（必须严格遵守 - 零容忍）</title>
         <requirements>
           <requirement level="must-zero-tolerance">所有生成的SQL必须包含数据量限制，这是强制要求</requirement>
-          <requirement level="must">默认限制：1000条（除非用户明确指定其他数量）</requirement>
+          <requirement level="must">默认限制：40条（除非用户明确指定其他数量）</requirement>
           <requirement level="must">忘记添加数据量限制是不可接受的错误</requirement>
         </requirements>
         

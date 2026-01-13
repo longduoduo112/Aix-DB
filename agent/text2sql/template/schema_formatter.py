@@ -74,14 +74,15 @@ def format_schema_to_m_schema(
             schema_table += ",\n".join(field_list)
         
         schema_table += "\n]\n"
+
+        # 添加表级外键关系（由 db_service.supplement_related_tables 写入）
+        foreign_keys = table_info.get("foreign_keys") or []
+        if foreign_keys:
+            # 直接以 table1.field1=table2.field2 的形式输出给 LLM
+            for fk in foreign_keys:
+                schema_table += f"{fk}\n"
+
         schema_str += schema_table
-    
-    # 添加外键关系信息（如果存在）
-    # 当前项目中，表关系信息通过 Neo4j 获取，格式为：
-    # [{"from_table": "table1", "relationship": "relation", "to_table": "table2"}, ...]
-    # M-Schema 的格式为：table1.column=table2.column
-    # 由于当前项目的表关系信息不包含具体的列信息，暂时不添加外键部分
-    # TODO: 阶段二可以增强，从 Neo4j 或数据库 metadata 中获取完整的外键信息
     
     return schema_str
 

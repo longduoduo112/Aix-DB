@@ -46,9 +46,13 @@ async def datasource_selector(state: AgentState) -> AgentState:
         db_pool = get_db_pool()
         with db_pool.get_session() as session:
             datasources = DatasourceService.get_datasource_list(session)
-            
+
             if not datasources:
-                logger.warning("没有可用的数据源")
+                # 典型场景：原对话绑定的数据源已被删除，或当前空间下无可用数据源
+                msg = "当前对话关联的数据源已不存在或无可用的数据源，请重新选择数据源后再尝试。"
+                logger.warning(f"没有可用的数据源: {msg}")
+                # 将提示信息写入状态，由后续异常节点统一输出给用户
+                state["error_message"] = msg
                 return state
 
             # 构建数据源列表（包含 id、name、description）
@@ -106,19 +110,28 @@ async def datasource_selector(state: AgentState) -> AgentState:
                 state["datasource_id"] = selected_id
                 logger.info(f"LLM 选择的数据源 ID: {selected_id}")
             elif "fail" in result:
-                logger.warning(f"LLM 未能选择数据源: {result.get('fail', '未知错误')}")
+                fail_reason = result.get("fail", "没有找到匹配的数据源或数据源已删除")
+                logger.warning(f"LLM 未能选择数据源: {fail_reason}")
+                # 记录到状态，供异常节点返回给前端
+                state["error_message"] = f"数据源选择失败：{fail_reason}"
             else:
                 logger.warning(f"LLM 响应格式不正确: {result}")
+                state["error_message"] = "数据源选择失败：LLM 响应格式不正确，无法识别可用的数据源。"
 
         except json.JSONDecodeError as e:
             logger.error(f"解析 LLM 响应 JSON 失败: {e}")
             logger.error(f"响应内容: {response_content[:500]}")
+            state["error_message"] = "数据源选择失败：无法解析大模型返回结果。"
         except ValueError as e:
             logger.error(f"解析数据源 ID 失败: {e}")
             logger.error(f"响应内容: {response_content[:500]}")
+            state["error_message"] = "数据源选择失败：解析数据源 ID 出错。"
 
     except Exception as e:
         traceback.print_exception(e)
         logger.error(f"数据源选择过程中发生错误: {e}", exc_info=True)
+        # 兜底异常提示
+        if not state.get("error_message"):
+            state["error_message"] = "数据源选择过程中发生未知错误，请稍后重试或联系管理员。"
 
     return state

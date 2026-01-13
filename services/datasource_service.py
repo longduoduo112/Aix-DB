@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 
 from model.datasource_models import Datasource, DatasourceTable, DatasourceField
 from model.db_connection_pool import get_db_pool
+from model.db_models import TAiModel
+from langfuse.openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +89,8 @@ class DatasourceService:
 
         # 记录处理过的表、字段 id
         keep_table_ids: List[int] = []
+        # 用于批量 embedding 计算的 (table, fields) 列表
+        embedding_items: List[Dict[str, Any]] = []
 
         # 获取源库总表数，用于 num 统计
         try:
@@ -176,6 +180,17 @@ class DatasourceService:
                     and_(DatasourceField.table_id == table.id, DatasourceField.id.not_in(keep_field_ids))
                 ).delete(synchronize_session=False)
 
+            # 收集用于 embedding 的字段精简信息，避免在批量计算时再次查询
+            field_docs = [
+                {
+                    "fieldName": f.get("fieldName"),
+                    "fieldComment": f.get("fieldComment") or "",
+                }
+                for f in fields
+                if f.get("fieldName")
+            ]
+            embedding_items.append({"table": table, "fields": field_docs})
+
         # 删除未包含的表及其字段
         if keep_table_ids:
             session.query(DatasourceTable).filter(
@@ -188,6 +203,184 @@ class DatasourceService:
         # 更新 num 统计
         datasource.num = f"{len(keep_table_ids)}/{total_count}"
         session.add(datasource)
+
+        # 批量计算并保存表的 embedding（表名 + 注释 + 字段名 + 字段注释）
+        try:
+            DatasourceService._compute_and_save_table_embeddings_batch(session, embedding_items)
+        except Exception as e:
+            logger.warning(f"批量计算表 embedding 失败: {e}", exc_info=True)
+
+    @staticmethod
+    def _get_embedding_client():
+        """获取 embedding 客户端和模型名称"""
+        try:
+            db_pool = get_db_pool()
+            with db_pool.get_session() as session:
+                # model_type: 2 -> Embedding
+                model = session.query(TAiModel).filter(TAiModel.model_type == 2, TAiModel.default_model == True).first()
+                
+                if not model:
+                    # Fallback: 尝试查找任何 embedding 模型
+                    model = session.query(TAiModel).filter(TAiModel.model_type == 2).first()
+                
+                # Fallback to LLM
+                if not model:
+                    model = session.query(TAiModel).filter(
+                        TAiModel.model_type == 1,
+                        TAiModel.default_model == True
+                    ).first()
+                
+                if not model:
+                    model = session.query(TAiModel).filter(TAiModel.model_type == 1).first()
+                
+                if not model:
+                    logger.warning("未配置嵌入模型，无法计算表 embedding")
+                    return None, None
+                
+                base_model = model.base_model
+                if model.model_type == 1 and model.supplier == 1:
+                    base_model = "text-embedding-3-small"
+                
+                embedding_client = OpenAI(
+                    api_key=model.api_key or "empty",
+                    base_url=model.api_domain
+                )
+                return embedding_client, base_model
+        except Exception as e:
+            logger.error(f"获取 embedding 客户端失败: {e}", exc_info=True)
+            return None, None
+
+    @staticmethod
+    def _build_table_document(table: DatasourceTable, fields: List[Dict[str, Any]]) -> str:
+        """
+        构建用于检索的文档文本（表名 + 注释 + 字段名 + 字段注释）。
+        
+        Args:
+            table: 表对象
+            fields: 字段列表
+            
+        Returns:
+            文档文本
+        """
+        parts = [table.table_name]
+        
+        # 添加表注释（优先使用 custom_comment，否则使用 table_comment）
+        table_comment = table.custom_comment or table.table_comment or ""
+        if table_comment:
+            parts.append(table_comment)
+        
+        # 添加字段名和字段注释
+        for field in fields:
+            field_name = field.get("fieldName") or field.get("field_name")
+            if field_name:
+                parts.append(field_name)
+                field_comment = field.get("fieldComment") or field.get("field_comment") or ""
+                if field_comment:
+                    parts.append(field_comment)
+        
+        return " ".join(parts)
+
+    @staticmethod
+    def _compute_and_save_table_embedding(session: Session, table: DatasourceTable, fields: List[Dict[str, Any]]):
+        """
+        计算并保存表的 embedding。
+        
+        Args:
+            session: 数据库会话
+            table: 表对象
+            fields: 字段列表
+        """
+        # 检查是否有 embedding 字段
+        if not hasattr(table, 'embedding'):
+            logger.debug(f"表 {table.table_name} 没有 embedding 字段，跳过计算")
+            return
+        
+        # 获取 embedding 客户端
+        embedding_client, model_name = DatasourceService._get_embedding_client()
+        if not embedding_client or not model_name:
+            return
+        
+        try:
+            # 构建文档文本
+            document = DatasourceService._build_table_document(table, fields)
+            
+            if not document or not document.strip():
+                logger.warning(f"表 {table.table_name} 的文档文本为空，跳过 embedding 计算")
+                return
+            
+            # 计算 embedding
+            logger.info(f"计算表 {table.table_name} 的 embedding...")
+            response = embedding_client.embeddings.create(model=model_name, input=document)
+            embedding_vec = response.data[0].embedding
+            
+            # 将 embedding 转换为 JSON 字符串并保存
+            embedding_json = json.dumps(embedding_vec)
+            table.embedding = embedding_json
+            
+            logger.info(f"✅ 表 {table.table_name} 的 embedding 计算并保存成功")
+            
+        except Exception as e:
+            logger.error(f"计算表 {table.table_name} 的 embedding 失败: {e}", exc_info=True)
+            # 不抛出异常，避免影响表同步流程
+
+    @staticmethod
+    def _compute_and_save_table_embeddings_batch(session: Session, items: List[Dict[str, Any]]):
+        """
+        批量计算并保存多个表的 embedding，减少 API 调用次数。
+
+        Args:
+            session: 数据库会话
+            items: 列表，每项包含 {"table": DatasourceTable, "fields": List[Dict]}
+        """
+        if not items:
+            return
+
+        # 统一检查是否支持 embedding 字段
+        tables_for_embedding: List[DatasourceTable] = []
+        docs: List[str] = []
+
+        for item in items:
+            table: DatasourceTable = item.get("table")
+            fields: List[Dict[str, Any]] = item.get("fields") or []
+
+            if not table or not hasattr(table, "embedding"):
+                continue
+
+            doc = DatasourceService._build_table_document(table, fields)
+            if not doc or not doc.strip():
+                continue
+
+            tables_for_embedding.append(table)
+            docs.append(doc)
+
+        if not docs:
+            return
+
+        # 获取 embedding 客户端
+        embedding_client, model_name = DatasourceService._get_embedding_client()
+        if not embedding_client or not model_name:
+            return
+
+        try:
+            logger.info(f"批量计算 {len(docs)} 个表的 embedding...")
+            response = embedding_client.embeddings.create(model=model_name, input=docs)
+            data = response.data or []
+
+            if len(data) != len(tables_for_embedding):
+                logger.warning(
+                    f"批量 embedding 返回数量与请求数量不一致: 请求 {len(tables_for_embedding)}, 返回 {len(data)}"
+                )
+
+            for idx, table in enumerate(tables_for_embedding):
+                if idx >= len(data):
+                    break
+                embedding_vec = data[idx].embedding
+                embedding_json = json.dumps(embedding_vec)
+                table.embedding = embedding_json
+
+            logger.info("✅ 批量表 embedding 计算并保存成功")
+        except Exception as e:
+            logger.error(f"批量计算表 embedding 失败: {e}", exc_info=True)
 
     @staticmethod
     def update_datasource(session: Session, ds_id: int, data: Dict[str, Any]) -> Optional[Datasource]:
@@ -324,6 +517,23 @@ class DatasourceService:
         if "checked" in data:
             table.checked = data["checked"]
 
+        # 如果表注释或字段信息发生变化，重新计算 embedding
+        # 获取该表的所有字段
+        fields = session.query(DatasourceField).filter(DatasourceField.table_id == table_id).all()
+        fields_data = [
+            {
+                "fieldName": field.field_name,
+                "fieldComment": field.custom_comment or field.field_comment or "",
+            }
+            for field in fields
+        ]
+        
+        # 重新计算 embedding
+        try:
+            DatasourceService._compute_and_save_table_embedding(session, table, fields_data)
+        except Exception as e:
+            logger.warning(f"更新表 {table.table_name} 的 embedding 失败: {e}", exc_info=True)
+
         session.commit()
         return True
 
@@ -342,6 +552,25 @@ class DatasourceService:
             field.custom_comment = data["custom_comment"]
         if "checked" in data:
             field.checked = data["checked"]
+
+        # 如果字段信息发生变化，重新计算所属表的 embedding
+        table = session.query(DatasourceTable).filter(DatasourceTable.id == field.table_id).first()
+        if table:
+            # 获取该表的所有字段
+            fields = session.query(DatasourceField).filter(DatasourceField.table_id == field.table_id).all()
+            fields_data = [
+                {
+                    "fieldName": f.field_name,
+                    "fieldComment": f.custom_comment or f.field_comment or "",
+                }
+                for f in fields
+            ]
+            
+            # 重新计算 embedding
+            try:
+                DatasourceService._compute_and_save_table_embedding(session, table, fields_data)
+            except Exception as e:
+                logger.warning(f"更新表 {table.table_name} 的 embedding 失败: {e}", exc_info=True)
 
         session.commit()
         return True

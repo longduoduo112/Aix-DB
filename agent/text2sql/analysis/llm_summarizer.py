@@ -1,6 +1,8 @@
 import logging
-from datetime import datetime
+from datetime import datetime, date
 import json
+import re
+from decimal import Decimal
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -12,6 +14,41 @@ logger = logging.getLogger(__name__)
 """
 大模型数据总结节点
 """
+
+
+class DecimalEncoder(json.JSONEncoder):
+    """自定义JSON编码器，处理Decimal和其他不可序列化类型"""
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            # 将Decimal转换为float，保持数值精度
+            return float(obj)
+        elif isinstance(obj, (date, datetime)):
+            # 处理日期时间类型
+            return obj.isoformat()
+        return super().default(obj)
+
+
+def remove_code_block_markers(text: str) -> str:
+    """
+    去除文本中的代码块标记（```）
+    
+    Args:
+        text: 可能包含代码块标记的文本
+        
+    Returns:
+        去除代码块标记后的纯文本
+    """
+    if not text:
+        return text
+    
+    # 去除开头的代码块标记（可能包含语言标识符，如 ```markdown, ```python 等）
+    text = re.sub(r'^```[\w]*\n?', '', text, flags=re.MULTILINE)
+    # 去除结尾的代码块标记
+    text = re.sub(r'\n?```$', '', text, flags=re.MULTILINE)
+    # 去除首尾空白字符
+    text = text.strip()
+    
+    return text
 
 
 def summarize(state: AgentState):
@@ -33,7 +70,7 @@ def summarize(state: AgentState):
         
         # 如果数据是字典或列表，转换为JSON字符串
         if isinstance(data_result, (dict, list)):
-            data_result_str = json.dumps(data_result, ensure_ascii=False, indent=2)
+            data_result_str = json.dumps(data_result, ensure_ascii=False, indent=2, cls=DecimalEncoder)
         else:
             data_result_str = str(data_result)
         
@@ -57,7 +94,8 @@ def summarize(state: AgentState):
         
         # 调用 LLM
         response = llm.invoke(messages)
-        state["report_summary"] = response.content
+        # 去除代码块标记，返回纯文本
+        state["report_summary"] = remove_code_block_markers(response.content)
 
     except Exception as e:
         logger.error(f"Error in Summarizer: {e}", exc_info=True)

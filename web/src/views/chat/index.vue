@@ -888,6 +888,7 @@ onMounted(async () => {
   catch (e) {
     console.error(e)
   }
+  
 })
 
 // 在组件卸载前移除事件监听
@@ -1510,7 +1511,7 @@ const handleHistoryClick = async (item: any) => {
             <!-- 顶部加载更旧消息提示（滚动到顶部加载时显示） -->
             <transition name="fade">
               <div
-                v-if="isView && isLoadingConversationHistory && conversationHistoryMinLoadedPage.value > 1"
+                v-if="isView && isLoadingConversationHistory && conversationHistoryMinLoadedPage > 1"
                 class="flex justify-center items-center py-2 conversation-loading-indicator"
               >
                 <div class="flex items-center gap-2 text-[#999] text-[13px]">

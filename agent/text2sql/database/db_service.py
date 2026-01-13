@@ -7,14 +7,13 @@ from model import Datasource
 
 warnings.filterwarnings("ignore", message=".*pkg_resources.*deprecated.*")
 
-import hashlib
 import json
 import logging
 import os
 import re
 import time
-from functools import lru_cache
 from typing import Dict, List, Tuple, Optional
+from threading import Lock
 
 import faiss
 import jieba
@@ -29,7 +28,10 @@ from sqlalchemy.sql.expression import text
 
 from agent.text2sql.state.agent_state import AgentState, ExecutionResult
 from model.db_connection_pool import get_db_pool
-from model.db_models import TAiModel
+from model.db_models import TAiModel, TDsPermission, TDsRules
+from model.datasource_models import DatasourceTable, DatasourceField
+from agent.text2sql.permission.permission_retriever import get_user_permission_filters
+from sqlalchemy import select
 
 # 日志配置
 logger = logging.getLogger(__name__)
@@ -37,14 +39,14 @@ logger = logging.getLogger(__name__)
 # 数据库连接池
 db_pool = get_db_pool()
 
-FORCE_REBUILD_VECTOR_INDEX = os.getenv("FORCE_REBUILD_VECTOR_INDEX", "false").lower() == "true"
 
-# 向量索引存储路径
-VECTOR_INDEX_DIR = "./vector_index"
-os.makedirs(VECTOR_INDEX_DIR, exist_ok=True)
+# 返回表数量配置（可配置，默认 6 个）
+TABLE_RETURN_COUNT = int(os.getenv("TABLE_RETURN_COUNT", "6"))
 
-INDEX_FILE = os.path.join(VECTOR_INDEX_DIR, "schema.index")
-METADATA_FILE = os.path.join(VECTOR_INDEX_DIR, "metadata.json")
+# 缓存配置
+_table_info_cache: Dict[Tuple[int, Optional[int]], Tuple[Dict[str, Dict], float]] = {}
+_cache_lock = Lock()
+CACHE_TTL = int(os.getenv("TABLE_INFO_CACHE_TTL", "300"))  # 缓存有效期（秒），默认5分钟
 
 
 # 嵌入模型配置
@@ -106,11 +108,15 @@ class DatabaseService:
 
     def __init__(self, datasource_id: int = None):
         self._engine = None
+        self._datasource_id = datasource_id
+        self._datasource = None
+        
         if datasource_id:
             try:
                 with db_pool.get_session() as session:
                     ds = session.query(Datasource).filter(Datasource.id == datasource_id).first()
                     if ds:
+                        self._datasource = ds
                         config = DatasourceConfigUtil.decrypt_config(ds.configuration)
                         uri = DatasourceConnectionUtil.build_connection_uri(ds.type, config)
                         self._engine = create_engine(uri)
@@ -195,25 +201,133 @@ class DatabaseService:
                 parts.append(col_info["comment"])
         return " ".join(parts)
 
-    @lru_cache(maxsize=1)
-    def _fetch_all_table_info(self) -> Dict[str, Dict]:
+    def _fetch_all_table_info(self, user_id: Optional[int] = None, use_cache: bool = True) -> Dict[str, Dict]:
         """
-        获取数据库中所有表的结构信息（带 LRU 缓存）。
+        获取数据库中所有表的结构信息（带权限过滤和缓存）。
+        
+        Args:
+            user_id: 用户ID，用于权限过滤（如果为1或None，不应用权限过滤）
+            use_cache: 是否使用缓存
+            
+        Returns:
+            表信息字典
         """
+        # 检查缓存
+        cache_key = (self._datasource_id or 0, user_id)
+        if use_cache:
+            with _cache_lock:
+                if cache_key in _table_info_cache:
+                    cached_data, cached_time = _table_info_cache[cache_key]
+                    if time.time() - cached_time < CACHE_TTL:
+                        logger.debug(f"✅ 使用缓存的表结构信息 (datasource_id={self._datasource_id}, user_id={user_id})")
+                        return cached_data
+        
         start_time = time.time()
         inspector = inspect(self._engine)
         table_names = inspector.get_table_names()
         logger.info(f"🔍 开始加载 {len(table_names)} 张表的 schema 信息...")
+
+        # 获取列权限配置（集成完整的权限系统）
+        column_permissions = {}
+        if user_id and user_id != 1 and self._datasource_id:
+            try:
+                with db_pool.get_session() as session:
+                    # 获取该数据源下所有表
+                    tables = session.query(DatasourceTable).filter(
+                        DatasourceTable.ds_id == self._datasource_id,
+                        DatasourceTable.table_name.in_(table_names)
+                    ).all()
+                    
+                    # 获取所有规则
+                    rules_stmt = select(TDsRules).where(TDsRules.enable == True)
+                    rules = session.execute(rules_stmt).scalars().all()
+                    
+                    for table in tables:
+                        allowed_fields = set()
+                        
+                        # 如果有规则，查询列权限配置
+                        if rules:
+                            permissions_stmt = select(TDsPermission).where(
+                                TDsPermission.table_id == table.id,
+                                TDsPermission.type == 'column',
+                                TDsPermission.enable == True
+                            )
+                            column_perms = session.execute(permissions_stmt).scalars().all()
+                            
+                            if column_perms:
+                                # 检查权限是否与用户匹配
+                                matching_permissions = []
+                                for permission in column_perms:
+                                    for rule in rules:
+                                        perm_ids = []
+                                        if rule.permission_list:
+                                            try:
+                                                perm_ids = json.loads(rule.permission_list)
+                                            except:
+                                                pass
+                                        
+                                        user_ids = []
+                                        if rule.user_list:
+                                            try:
+                                                user_ids = json.loads(rule.user_list)
+                                            except:
+                                                pass
+                                        
+                                        if perm_ids and user_ids:
+                                            if permission.id in perm_ids and (
+                                                user_id in user_ids or str(user_id) in user_ids
+                                            ):
+                                                matching_permissions.append(permission)
+                                                break
+                                
+                                # 解析列权限配置
+                                for perm in matching_permissions:
+                                    if perm.permissions:
+                                        try:
+                                            perm_config = json.loads(perm.permissions)
+                                            if isinstance(perm_config, list):
+                                                for field_perm in perm_config:
+                                                    if field_perm.get("enable", False):
+                                                        field_name = field_perm.get("field_name")
+                                                        if field_name:
+                                                            allowed_fields.add(field_name)
+                                        except Exception as e:
+                                            logger.debug(f"解析列权限配置失败: {e}, permission_id={perm.id}")
+                        
+                        # 如果没有匹配的权限配置，使用 checked 字段作为基础
+                        if not allowed_fields:
+                            fields = session.query(DatasourceField).filter(
+                                DatasourceField.ds_id == self._datasource_id,
+                                DatasourceField.table_id == table.id,
+                                DatasourceField.checked == True
+                            ).all()
+                            allowed_fields = {field.field_name for field in fields}
+                        
+                        if allowed_fields:
+                            column_permissions[table.table_name] = allowed_fields
+                            
+            except Exception as e:
+                logger.warning(f"⚠️ 获取列权限失败: {e}", exc_info=True)
 
         table_info = {}
         for table_name in table_names:
             try:
                 columns = {}
                 for col in inspector.get_columns(table_name):
+                    # 权限过滤：如果配置了列权限，只返回有权限的字段
+                    if table_name in column_permissions:
+                        if col["name"] not in column_permissions[table_name]:
+                            continue
+                    
                     columns[col["name"]] = {
                         "type": str(col["type"]),
                         "comment": str(col["comment"] or ""),
                     }
+
+                # 如果过滤后没有字段，跳过该表
+                if not columns:
+                    logger.debug(f"⚠️ 表 {table_name} 无可用字段（权限过滤后），跳过")
+                    continue
 
                 foreign_keys = [
                     f"{fk['constrained_columns'][0]} -> {fk['referred_table']}.{fk['referred_columns'][0]}"
@@ -232,75 +346,77 @@ class DatabaseService:
 
         elapsed = time.time() - start_time
         logger.info(f"✅ 成功加载 {len(table_info)} 张表，耗时 {elapsed:.2f}s")
+        
+        # 更新缓存
+        if use_cache:
+            with _cache_lock:
+                _table_info_cache[cache_key] = (table_info, time.time())
+        
         return table_info
 
-    @staticmethod
-    def _generate_schema_fingerprint(table_info: Dict[str, Dict]) -> str:
-        """
-        生成 schema 的指纹（MD5 哈希），用于检测变更。
-        """
-        fingerprint_data = {}
-        for table_name, info in table_info.items():
-            fingerprint_data[table_name] = {
-                "comment": info.get("table_comment", ""),
-                "columns": sorted(
-                    [f"{col_name}:{col_info.get('comment', '')}" for col_name, col_info in info["columns"].items()]
-                ),
-            }
-        json_str = json.dumps(fingerprint_data, sort_keys=True, ensure_ascii=False)
-        return hashlib.md5(json_str.encode("utf-8")).hexdigest()
 
-    def _load_vector_index(self, table_info: Dict[str, Dict]) -> bool:
+    def _get_precomputed_embeddings(self, table_info: Dict[str, Dict]) -> Tuple[Optional[np.ndarray], List[str], List[str]]:
         """
-        从磁盘加载 FAISS 向量索引和元数据。
-        """
-        if not (os.path.exists(INDEX_FILE) and os.path.exists(METADATA_FILE)):
-            logger.info("❌ 向量索引文件不存在，将重建")
-            return False
+        尝试从数据库获取预计算的 embedding。
+        仅从 t_datasource_table.embedding 字段读取，不做任何实时计算。
 
+        Returns:
+            (预计算的 embedding 数组, 有预计算 embedding 的表名列表, 需要计算的表名列表)
+        """
+        if not self._datasource_id:
+            return None, [], list(table_info.keys())
+        
         try:
-            with open(METADATA_FILE, "r", encoding="utf-8") as f:
-                metadata = json.load(f)
-
-            current_fingerprint = self._generate_schema_fingerprint(table_info)
-            if metadata.get("fingerprint") != current_fingerprint:
-                logger.info("🔄 数据库 schema 已变更，需重建向量索引")
-                return False
-
-            self._faiss_index = faiss.read_index(INDEX_FILE)
-            self._table_names = metadata["table_names"]
-            self._corpus = metadata["corpus"]
-
-            logger.info(f"🎉 成功加载向量索引，包含 {len(self._table_names)} 张表")
-            return True
-
+            with db_pool.get_session() as session:
+                # 查询数据源下的所有表
+                tables = session.query(DatasourceTable).filter(
+                    DatasourceTable.ds_id == self._datasource_id,
+                    DatasourceTable.table_name.in_(list(table_info.keys()))
+                ).all()
+                
+                # 构建表名到表的映射
+                table_map = {table.table_name: table for table in tables}
+                
+                # 收集有预计算 embedding 的表
+                precomputed_embeddings = []
+                precomputed_table_names = []
+                missing_table_names = []
+                
+                for table_name, info in table_info.items():
+                    table = table_map.get(table_name)
+                    # 检查是否有 embedding 字段（通过 hasattr 检查，避免字段不存在时报错）
+                    if table and hasattr(table, 'embedding') and table.embedding:
+                        try:
+                            embedding_vec = json.loads(table.embedding)
+                            if isinstance(embedding_vec, list) and len(embedding_vec) > 0:
+                                precomputed_embeddings.append(embedding_vec)
+                                precomputed_table_names.append(table_name)
+                            else:
+                                missing_table_names.append(table_name)
+                        except Exception as e:
+                            logger.debug(f"解析表 {table_name} 的 embedding 失败: {e}")
+                            missing_table_names.append(table_name)
+                    else:
+                        missing_table_names.append(table_name)
+                
+                if precomputed_embeddings:
+                    embeddings_array = np.array(precomputed_embeddings).astype("float32")
+                    faiss.normalize_L2(embeddings_array)
+                    logger.info(f"✅ 从数据库加载了 {len(precomputed_embeddings)} 个预计算的 embedding")
+                    return embeddings_array, precomputed_table_names, missing_table_names
+                else:
+                    return None, [], missing_table_names
+                    
         except Exception as e:
-            logger.warning(f"⚠️ 加载向量索引失败: {e}，将重建")
-            return False
-
-    def _save_vector_index(self, table_info: Dict[str, Dict]):
-        """
-        将 FAISS 索引和元数据保存到磁盘。
-        """
-        if self._faiss_index is None:
-            return
-
-        faiss.write_index(self._faiss_index, INDEX_FILE)
-
-        metadata = {
-            "table_names": self._table_names,
-            "corpus": self._corpus,
-            "fingerprint": self._generate_schema_fingerprint(table_info),
-            "updated_at": pd.Timestamp.now().isoformat(),
-        }
-        with open(METADATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, ensure_ascii=False, indent=2)
-
-        logger.info(f"✅ 向量索引已保存至: {INDEX_FILE}")
+            logger.warning(f"⚠️ 获取预计算 embedding 失败: {e}")
+            return None, [], list(table_info.keys())
 
     def _create_embeddings_with_dashscope(self, texts: List[str]) -> np.ndarray:
         """
         使用 DashScope API 生成文本嵌入向量。
+
+        注意：该方法不在在线检索路径中调用，仅用于离线预计算工具
+        或强制重建索引等管理场景中使用。
         """
         if not self.embedding_client:
             logger.error("❌ 嵌入模型未初始化")
@@ -324,38 +440,53 @@ class DatabaseService:
 
     def _initialize_vector_index(self, table_info: Dict[str, Dict]):
         """
-        初始化 FAISS 向量索引：加载或重建。
+        初始化 FAISS 向量索引：从数据库读取预计算的 embedding 并构建内存索引。
+        仅使用预计算的 embedding，不在检索时做实时计算。
         """
         if self._index_initialized:
             return
 
-        if FORCE_REBUILD_VECTOR_INDEX:
-            logger.info("💡 强制重建向量索引（环境变量触发）")
-        elif self._load_vector_index(table_info):
-            self._index_initialized = True
-            return
-
         # 构建新索引
-        logger.info("🏗️ 开始构建新的向量索引...")
+        logger.info("🏗️ 开始构建向量索引（从数据库读取 embedding）...")
         start_time = time.time()
 
+        # 记录所有表名和语料（用于 BM25 等）
         self._table_names = list(table_info.keys())
         self._corpus = [self._build_document(name, info) for name, info in table_info.items()]
 
-        # 生成嵌入
-        embeddings = self._create_embeddings_with_dashscope(self._corpus)
+        # 从数据库获取预计算的 embedding（不会做任何实时计算）
+        precomputed_embeddings, precomputed_table_names, missing_table_names = self._get_precomputed_embeddings(
+            table_info
+        )
+
+        # 如果没有任何预计算 embedding，则禁用向量索引（仅使用 BM25）
+        if precomputed_embeddings is None or len(precomputed_table_names) == 0:
+            logger.warning("⚠️ 未找到任何预计算的表结构 embedding，向量检索将被禁用，仅使用 BM25")
+            self._faiss_index = None
+            self._index_initialized = True
+            return
+
+        # 如果存在缺失的 embedding，为避免索引和表顺序不一致，这里直接禁用向量检索
+        if len(missing_table_names) > 0:
+            logger.warning(
+                f"⚠️ 共有 {len(missing_table_names)} 张表缺少预计算 embedding，"
+                "为保证索引与表顺序一致，本次禁用向量检索，仅使用 BM25"
+            )
+            self._faiss_index = None
+            self._index_initialized = True
+            return
+
+        # 此时说明所有表都存在预计算 embedding，顺序与 self._table_names 一致
+        embeddings = precomputed_embeddings
 
         if embeddings.size == 0:
             logger.error("❌ 无法生成嵌入，索引构建失败")
             return
 
-        # 初始化 FAISS 索引
+        # 初始化 FAISS 索引（仅在内存中）
         dimension = embeddings.shape[1]
         self._faiss_index = faiss.IndexFlatIP(dimension)  # 内积 = 余弦相似度
         self._faiss_index.add(embeddings)
-
-        # 保存索引
-        self._save_vector_index(table_info)
 
         elapsed = time.time() - start_time
         logger.info(f"🎉 向量索引构建完成，共 {len(self._table_names)} 张表，耗时 {elapsed:.2f}s")
@@ -523,13 +654,214 @@ class DatabaseService:
             logger.error(f"❌ Rerank 过程出错: {e}")
             return [(name, 1.0) for name in candidate_tables.keys()]
 
+    def supplement_related_tables(
+        self,
+        selected_table_names: List[str],
+        all_table_info: Dict[str, Dict],
+    ) -> List[str]:
+        """
+
+        - 表节点: {"id": 15, "shape": "er-rect", "attrs": {"text": {"text": "t_products"}}, ...}
+        - 关系边: {"shape": "edge", "source": {"cell": 15, "port": "135"}, "target": {"cell": 14, "port": "128"}}
+
+        其中 edge.source/target.cell 使用的是表记录主键 ID（对应 DatasourceTable.id）。
+
+        Args:
+            selected_table_names: 已选中的表名列表（来自检索阶段返回的 db_info.keys()）
+            all_table_info: 当前数据源下所有可用表的信息 dict（用于过滤补充表是否在权限范围内）
+
+        Returns:
+            扩展后的表名列表（包含原始表和通过表关系补充的关联表）
+        """
+        if not self._datasource_id or not selected_table_names:
+            return selected_table_names
+
+        try:
+            with db_pool.get_session() as session:
+                datasource = session.query(Datasource).filter(
+                    Datasource.id == self._datasource_id
+                ).first()
+                if not datasource or not datasource.table_relation:
+                    return selected_table_names
+
+                relations = datasource.table_relation
+                if not isinstance(relations, list):
+                    return selected_table_names
+
+                # 节点和边
+                table_nodes = [
+                    r for r in relations if r.get("shape") in ("er-rect", "rect")
+                ]
+                edges = [r for r in relations if r.get("shape") == "edge"]
+                if not edges:
+                    return selected_table_names
+
+                # 查询该数据源下所有表，构建 id <-> name 映射
+                all_tables = session.query(DatasourceTable).filter(
+                    DatasourceTable.ds_id == self._datasource_id
+                ).all()
+                if not all_tables:
+                    return selected_table_names
+
+                table_id_to_name = {table.id: table.table_name for table in all_tables}
+
+                # 已选中的表对应的表 ID（embedding / 检索阶段选中的表）
+                selected_name_set = set(selected_table_names)
+                selected_table_ids = {
+                    table.id for table in all_tables if table.table_name in selected_name_set
+                }
+                if not selected_table_ids:
+                    return selected_table_names
+
+                selected_table_ids_str = {str(tid) for tid in selected_table_ids}
+
+                # 找出与选中表相关的所有关系（任一端命中即可）
+                related_relations = []
+                for edge in edges:
+                    source = edge.get("source", {}) or {}
+                    target = edge.get("target", {}) or {}
+                    source_id = str(source.get("cell", "")) if source.get("cell") is not None else ""
+                    target_id = str(target.get("cell", "")) if target.get("cell") is not None else ""
+                    if source_id in selected_table_ids_str or target_id in selected_table_ids_str:
+                        related_relations.append(edge)
+
+                if not related_relations:
+                    logger.debug(
+                        f"表关系补充：未发现与选中表 {selected_table_names} 相关的关系边，跳过补充"
+                    )
+                    return selected_table_names
+
+                # 提取关系中的所有表 ID
+                relation_table_ids_str = set()
+                for rel in related_relations:
+                    source = rel.get("source", {}) or {}
+                    target = rel.get("target", {}) or {}
+                    source_id = str(source.get("cell", "")) if source.get("cell") is not None else ""
+                    target_id = str(target.get("cell", "")) if target.get("cell") is not None else ""
+                    if source_id:
+                        relation_table_ids_str.add(source_id)
+                    if target_id:
+                        relation_table_ids_str.add(target_id)
+
+                # 找出缺失的表 ID：关系中出现，但当前未选中
+                missing_table_ids_str = relation_table_ids_str - selected_table_ids_str
+
+                # 根据 ID 映射到表名，并确保在 all_table_info 中（权限过滤之后）
+                missing_table_names: List[str] = []
+                for tid_str in missing_table_ids_str:
+                    try:
+                        tid = int(tid_str)
+                    except (TypeError, ValueError):
+                        continue
+                    table_name = table_id_to_name.get(tid)
+                    if table_name and table_name in all_table_info:
+                        missing_table_names.append(table_name)
+
+                if missing_table_names:
+                    logger.info(
+                        f"🔗 表关系补充：从 {selected_table_names} 补充 "
+                        f"{len(missing_table_names)} 个关联表: {missing_table_names}"
+                    )
+                    extended_names = selected_table_names + [
+                        name for name in missing_table_names if name not in selected_name_set
+                    ]
+                else:
+                    extended_names = selected_table_names
+
+                # 生成 table1.field1=table2.field2 形式的外键信息，写入 all_table_info
+                # 构建 node 映射，便于通过 (cell, port) 找到字段名
+                node_by_id = {str(n.get("id")): n for n in table_nodes if n.get("id") is not None}
+
+                def _get_field_name(cell_id: str, port_id: str) -> str:
+                    """从关系图节点或 DatasourceField 中解析字段名。"""
+                    # 1) 从前端关系图的 ports 中取
+                    node = node_by_id.get(cell_id)
+                    if node:
+                        ports = (node.get("ports") or {}).get("items") or []
+                        for p in ports:
+                            if str(p.get("id")) == str(port_id):
+                                return (
+                                    p.get("attrs", {})
+                                    .get("portNameLabel", {})
+                                    .get("text", "")
+                                    .strip()
+                                )
+                    # 2) 兜底：从 DatasourceField.id 读取
+                    try:
+                        if port_id and str(port_id).isdigit():
+                            field = session.query(DatasourceField).filter(
+                                DatasourceField.id == int(port_id)
+                            ).first()
+                            if field and field.field_name:
+                                return field.field_name.strip()
+                    except Exception:
+                        pass
+                    return ""
+
+                # 为参与关系的表构建 foreign_keys 列表
+                extracted_fks = []
+                for rel in related_relations:
+                    source = rel.get("source", {}) or {}
+                    target = rel.get("target", {}) or {}
+                    source_id = str(source.get("cell", "")) if source.get("cell") is not None else ""
+                    target_id = str(target.get("cell", "")) if target.get("cell") is not None else ""
+                    source_port = str(source.get("port", "")) if source.get("port") is not None else ""
+                    target_port = str(target.get("port", "")) if target.get("port") is not None else ""
+
+                    # cell id -> 表名
+                    try:
+                        s_tid = int(source_id) if source_id and source_id.isdigit() else None
+                        t_tid = int(target_id) if target_id and target_id.isdigit() else None
+                    except ValueError:
+                        s_tid = t_tid = None
+
+                    s_table = table_id_to_name.get(s_tid) if s_tid is not None else None
+                    t_table = table_id_to_name.get(t_tid) if t_tid is not None else None
+
+                    if not s_table or not t_table:
+                        logger.debug(f"跳过关系：无法解析表名 (source_id={source_id}, target_id={target_id})")
+                        continue
+                    if s_table not in all_table_info or t_table not in all_table_info:
+                        logger.debug(f"跳过关系：表不在权限范围内 (s_table={s_table}, t_table={t_table})")
+                        continue
+
+                    # 获取字段名
+                    s_field = _get_field_name(source_id, source_port)
+                    t_field = _get_field_name(target_id, target_port)
+                    if not s_field or not t_field:
+                        logger.debug(f"跳过关系：无法解析字段名 (source_id={source_id}, port={source_port}, target_id={target_id}, port={target_port})")
+                        continue
+
+                    fk_str = f"{s_table}.{s_field}={t_table}.{t_field}"
+                    extracted_fks.append(fk_str)
+
+                    # 写入两端表的 foreign_keys 列表（避免重复）
+                    for tbl in (s_table, t_table):
+                        fk_list = all_table_info[tbl].setdefault("foreign_keys", [])
+                        if fk_str not in fk_list:
+                            fk_list.append(fk_str)
+
+                # 记录关系提取结果（仅记录数量）
+                if extracted_fks:
+                    logger.debug(f"提取到 {len(extracted_fks)} 条外键关系")
+                else:
+                    logger.debug("未提取到外键关系")
+
+                return extended_names
+
+        except Exception as e:
+            logger.warning(f"⚠️ 表关系补充失败: {e}", exc_info=True)
+            return selected_table_names
+
     def get_table_schema(self, state: AgentState) -> AgentState:
         """
         根据用户查询，通过混合检索筛选出最相关的数据库表结构。
+        包含权限过滤、表关系补充等功能。
         """
         try:
             logger.info("🔍 开始获取数据库表 schema 信息")
-            all_table_info = self._fetch_all_table_info()
+            user_id = state.get("user_id")
+            all_table_info = self._fetch_all_table_info(user_id=user_id)
 
             user_query = state.get("user_query", "").strip()
             if not user_query:
@@ -553,8 +885,8 @@ class DatabaseService:
             logger.info(f"🎯 初步筛选后保留 {len(candidate_indices)} 个候选表")
 
             if not candidate_indices:
-                candidate_indices = bm25_top_indices[:4]  # 降级
-                logger.info("⚠️ 候选表为空，降级使用BM25前4个结果")
+                candidate_indices = bm25_top_indices[:TABLE_RETURN_COUNT]  # 降级
+                logger.info(f"⚠️ 候选表为空，降级使用BM25前{TABLE_RETURN_COUNT}个结果")
 
             fused_indices = self._rrf_fusion(bm25_top_indices, candidate_indices, k=60)
             logger.info(f"🔄 RRF融合后得到 {len(fused_indices)} 个结果")
@@ -575,21 +907,26 @@ class DatabaseService:
 
             # 重排序
             reranked_results = self._rerank_with_dashscope(user_query, candidate_table_info)
-            final_table_names = [name for name, _ in reranked_results][:4]  # 取 top 4
+            final_table_names = [name for name, _ in reranked_results][:TABLE_RETURN_COUNT]  # 取 top N（可配置）
 
-            # 构建输出
-            filtered_info = {name: all_table_info[name] for name in final_table_names}
+            # 去重
+            final_table_names = list(dict.fromkeys(final_table_names))
+
+            # 构建输出（表关系补充将在 SQL 生成阶段进行）
+            filtered_info = {name: all_table_info[name] for name in final_table_names if name in all_table_info}
 
             # 打印结果摘要
             print(f"\n🔍 用户查询: {user_query}")
             print("📊 检索与排序结果:")
-            for i, (table_name, score) in enumerate(reranked_results):
-                bm25_idx = self._table_names.index(table_name) if table_name in self._table_names else -1
-                bm25_rank = bm25_top_indices.index(bm25_idx) + 1 if bm25_idx in bm25_top_indices else "-"
-                vector_rank = vector_top_indices.index(bm25_idx) + 1 if bm25_idx in vector_top_indices else "-"
-                print(
-                    f"  {i + 1}. {table_name:<15} | BM25: {bm25_rank:>2} | Vector: {vector_rank:>2} | Rerank: {score:.3f}"
-                )
+            for i, table_name in enumerate(final_table_names[:TABLE_RETURN_COUNT]):
+                if table_name in self._table_names:
+                    bm25_idx = self._table_names.index(table_name)
+                    bm25_rank = bm25_top_indices.index(bm25_idx) + 1 if bm25_idx in bm25_top_indices else "-"
+                    vector_rank = vector_top_indices.index(bm25_idx) + 1 if bm25_idx in vector_top_indices else "-"
+                    rerank_score = next((score for name, score in reranked_results if name == table_name), 0.0)
+                    print(
+                        f"  {i + 1}. {table_name:<15} | BM25: {bm25_rank:>2} | Vector: {vector_rank:>2} | Rerank: {rerank_score:.3f}"
+                    )
 
             state["db_info"] = filtered_info
             logger.info(f"✅ 最终筛选出 {len(filtered_info)} 个相关表: {list(filtered_info.keys())}")

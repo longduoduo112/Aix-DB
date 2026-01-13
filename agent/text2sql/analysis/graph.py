@@ -6,7 +6,6 @@ from langgraph.graph.state import CompiledStateGraph
 from agent.text2sql.analysis.data_render_antv import data_render_ant
 from agent.text2sql.analysis.llm_summarizer import summarize
 from agent.text2sql.database.db_service import DatabaseService
-from agent.text2sql.database.neo4j_search import get_table_relationship
 from agent.text2sql.sql.generator import sql_generate
 from agent.text2sql.permission.filter_injector import permission_filter_injector
 from agent.text2sql.chart.generator import chart_generator
@@ -28,14 +27,32 @@ def data_render_condition(state: AgentState) -> str:
 def should_continue_after_datasource_selector(state: AgentState) -> str:
     """
     数据源选择节点后的条件判断
-    如果 datasource_id 仍然为空，说明选择失败，直接结束
+    如果 datasource_id 仍然为空，说明选择失败，进入异常处理节点
     否则进入 schema_inspector
     """
     datasource_id = state.get("datasource_id")
     if not datasource_id:
-        logger.warning("数据源选择失败，无法继续")
-        return END  # 直接结束
+        logger.warning("数据源选择失败，进入异常处理节点")
+        return "error_handler"
     return "schema_inspector"
+
+
+def handle_datasource_error(state: AgentState) -> AgentState:
+    """
+    数据源异常处理节点
+
+    场景：
+    - 原对话绑定的数据源已被删除；
+    - 当前空间下没有可用的数据源；
+    - LLM 无法选择合适的数据源等。
+
+    该节点不再向后执行，仅负责将友好的错误信息写入状态，
+    由上层 Agent 统一以 t02 文本形式返回给前端。
+    """
+    if not state.get("error_message"):
+        state["error_message"] = "当前没有可用的数据源，请先在数据源管理中配置或重新选择数据源后再进行数据问答。"
+    logger.warning(f"数据源异常处理节点: {state.get('error_message')}")
+    return state
 
 
 def create_graph(datasource_id: int = None):
@@ -46,8 +63,8 @@ def create_graph(datasource_id: int = None):
     db_service = DatabaseService(datasource_id)
 
     graph.add_node("datasource_selector", datasource_selector)
+    graph.add_node("error_handler", handle_datasource_error)
     graph.add_node("schema_inspector", db_service.get_table_schema)
-    graph.add_node("table_relationship", get_table_relationship)
     graph.add_node("sql_generator", sql_generate)
     graph.add_node("permission_filter", permission_filter_injector)
     graph.add_node("sql_executor", db_service.execute_sql)
@@ -63,11 +80,16 @@ def create_graph(datasource_id: int = None):
     graph.add_conditional_edges(
         "datasource_selector",
         should_continue_after_datasource_selector,
-        {END: END, "schema_inspector": "schema_inspector"},
+        {
+            "error_handler": "error_handler",
+            "schema_inspector": "schema_inspector",
+        },
     )
+    # 异常节点执行完毕后直接结束
+    graph.add_edge("error_handler", END)
     
-    graph.add_edge("schema_inspector", "table_relationship")
-    graph.add_edge("table_relationship", "sql_generator")
+    # 表关系补充已在 get_table_schema 中完成，不再需要单独的 table_relationship 节点
+    graph.add_edge("schema_inspector", "sql_generator")
     graph.add_edge("sql_generator", "permission_filter")
     graph.add_edge("permission_filter", "sql_executor")
     graph.add_edge("sql_executor", "chart_generator")

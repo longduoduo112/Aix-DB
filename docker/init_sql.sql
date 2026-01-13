@@ -44,7 +44,8 @@ CREATE TABLE t_datasource_table (
   checked BOOLEAN DEFAULT TRUE,
   table_name TEXT NOT NULL,
   table_comment TEXT,
-  custom_comment TEXT
+  custom_comment TEXT,
+  embedding TEXT
 );
 
 COMMENT ON TABLE t_datasource_table IS '数据源表信息';
@@ -53,6 +54,7 @@ COMMENT ON COLUMN t_datasource_table.checked IS '是否选中';
 COMMENT ON COLUMN t_datasource_table.table_name IS '表名';
 COMMENT ON COLUMN t_datasource_table.table_comment IS '表注释';
 COMMENT ON COLUMN t_datasource_table.custom_comment IS '自定义注释';
+COMMENT ON COLUMN t_datasource_table.embedding IS '表结构 embedding (JSON 数组字符串)';
 
 -- t_datasource_field definition
 DROP TABLE IF EXISTS t_datasource_field CASCADE;

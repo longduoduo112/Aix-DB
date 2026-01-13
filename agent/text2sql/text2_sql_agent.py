@@ -113,7 +113,7 @@ class Text2SqlAgent:
 
             # 流结束时关闭最后的details标签
             if self.show_thinking_process:
-                if current_step is not None and current_step not in ["summarize", "data_render"]:
+                if current_step is not None and current_step not in ["summarize", "data_render", "error_handler"]:
                     await self._close_current_step(response, t02_answer_data)
 
             # 只有在未取消的情况下才保存记录
@@ -185,11 +185,12 @@ class Text2SqlAgent:
         if self.show_thinking_process:
             if new_step != current_step:
                 # 如果之前有打开的步骤，先关闭它
-                if current_step is not None and current_step not in ["summarize", "data_render"]:
+                if current_step is not None and current_step not in ["summarize", "data_render", "error_handler"]:
                     await self._close_current_step(response, t02_answer_data)
 
-                # 打开新的步骤 (除了 summarize 和 data_render) think_html 标签里面添加open属性控制思考过程是否默认展开显示
-                if new_step not in ["summarize", "data_render"]:
+                # 打开新的步骤 (除了 summarize、data_render 和 error_handler) think_html 标签里面添加open属性控制思考过程是否默认展开显示
+                # error_handler 是异常节点，直接显示错误信息，不需要显示思考过程标签
+                if new_step not in ["summarize", "data_render", "error_handler"]:
                     think_html = f"""<details style="color:gray;background-color: #f8f8f8;padding: 2px;border-radius: 
                     6px;margin-top:5px;">
                                  <summary>{new_step}...</summary>"""
@@ -197,9 +198,9 @@ class Text2SqlAgent:
                     t02_answer_data.append(think_html)
         else:
             # 如果不显示思考过程，则只处理特定的步骤
-            if new_step in ["summarize", "data_render"]:
+            if new_step in ["summarize", "data_render", "error_handler"]:
                 # 对于需要显示的步骤，确保之前的步骤已关闭
-                if current_step is not None and current_step not in ["summarize", "data_render"]:
+                if current_step is not None and current_step not in ["summarize", "data_render", "error_handler"]:
                     pass  # 不需要关闭details标签，因为我们根本没有打开它
 
         return new_step, t02_answer_data
@@ -225,6 +226,11 @@ class Text2SqlAgent:
         处理各个步骤的内容
         """
         content_map = {
+            # 数据源异常节点：仅输出友好的错误提示，不再继续后续步骤
+            "error_handler": lambda: step_value.get(
+                "error_message",
+                "当前没有可用的数据源，请先在数据源管理中配置或重新选择数据源后再进行数据问答。",
+            ),
             "schema_inspector": lambda: self._format_db_info(step_value["db_info"]),
             "table_relationship": lambda: json.dumps(step_value["table_relationship"], ensure_ascii=False),
             "sql_generator": lambda: step_value["generated_sql"],
@@ -243,7 +249,8 @@ class Text2SqlAgent:
             )
 
             # 根据环境变量决定是否发送非关键步骤的内容
-            should_send = self.show_thinking_process or step_name in ["summarize", "data_render"]
+            # error_handler 是异常节点，必须发送错误信息给用户
+            should_send = self.show_thinking_process or step_name in ["summarize", "data_render", "error_handler"]
 
             if should_send:
                 await self._send_response(response=response, content=content, data_type=data_type)

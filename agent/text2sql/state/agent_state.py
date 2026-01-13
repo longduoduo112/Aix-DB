@@ -33,3 +33,5 @@ class AgentState(TypedDict):
     user_id: Optional[int]  # 用户ID（用于权限过滤）
     filtered_sql: Optional[str]  # 权限过滤后的SQL
     recommended_questions: Optional[List[str]]  # 推荐问题列表
+    used_tables: Optional[List[str]]  # SQL 使用的表名列表
+    error_message: Optional[str]  # 异常信息（如数据源选择失败时的提示）

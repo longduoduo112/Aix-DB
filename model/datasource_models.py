@@ -37,6 +37,8 @@ class DatasourceTable(Base):
     table_name: Mapped[str] = mapped_column(Text, nullable=False, comment="表名")
     table_comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="表注释")
     custom_comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="自定义注释")
+    # 表结构向量：基于“表名 + 注释 + 字段名 + 字段注释”的文本生成的 embedding，存为 JSON 数组字符串
+    embedding: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="表结构 embedding (JSON 数组字符串)")
 
 
 class DatasourceField(Base):

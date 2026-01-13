@@ -77,24 +77,123 @@ export const transformStreamValue: Record<
     }
   },
   spark(readValue) {
+    // 如果是字符串，尝试解析 JSON
+    if (typeof readValue === 'string') {
+      try {
+        const json = JSON.parse(readValue)
+        // 处理自定义格式：{"messageType":"continue","content":"..."}
+        if (json.messageType !== undefined && json.content !== undefined) {
+          return {
+            content: json.content || '',
+          }
+        }
+        // 处理自定义格式：{"data":{"messageType":"continue","content":"..."},"dataType":"t02"}
+        if (json.data && json.data.content !== undefined) {
+          return {
+            content: json.data.content || '',
+          }
+        }
+      } catch (error) {
+        // 如果不是 JSON，继续使用原来的逻辑
+      }
+    }
+
+    // 原来的逻辑：处理 data: 前缀的格式
     const stream = parseJsonLikeData(readValue)
-    if (stream.done) {
+    if (stream) {
+      if (stream.done) {
+        return {
+          done: true,
+        }
+      }
       return {
-        done: true,
+        content: stream.choices[0].delta.content || '',
       }
     }
     return {
-      content: stream.choices[0].delta.content || '',
+      content: '',
     }
   },
   siliconflow(readValue) {
-    // 与 spark 类似，直接复用
-    return this.spark(readValue)
+    // 与 spark 类似，使用相同的逻辑
+    // 如果是字符串，尝试解析 JSON
+    if (typeof readValue === 'string') {
+      try {
+        const json = JSON.parse(readValue)
+        // 处理自定义格式：{"messageType":"continue","content":"..."}
+        if (json.messageType !== undefined && json.content !== undefined) {
+          return {
+            content: json.content || '',
+          }
+        }
+        // 处理自定义格式：{"data":{"messageType":"continue","content":"..."},"dataType":"t02"}
+        if (json.data && json.data.content !== undefined) {
+          return {
+            content: json.data.content || '',
+          }
+        }
+      } catch (error) {
+        // 如果不是 JSON，继续使用原来的逻辑
+      }
+    }
+
+    // 原来的逻辑：处理 data: 前缀的格式
+    const stream = parseJsonLikeData(readValue)
+    if (stream) {
+      if (stream.done) {
+        return {
+          done: true,
+        }
+      }
+      return {
+        content: stream.choices[0].delta.content || '',
+      }
+    }
+    return {
+      content: '',
+    }
   },
   qwen2(readValue) {
-    const stream = JSON.parse(readValue)
-    return {
-      content: stream.content,
+    // 如果是字符串，尝试解析 JSON
+    if (typeof readValue === 'string') {
+      try {
+        const json = JSON.parse(readValue)
+        // 处理自定义格式：{"messageType":"continue","content":"..."}
+        if (json.messageType !== undefined && json.content !== undefined) {
+          return {
+            content: json.content || '',
+          }
+        }
+        // 处理自定义格式：{"data":{"messageType":"continue","content":"..."},"dataType":"t02"}
+        if (json.data && json.data.content !== undefined) {
+          return {
+            content: json.data.content || '',
+          }
+        }
+        // 处理原有的 qwen2 格式：直接包含 content
+        if (json.content !== undefined) {
+          return {
+            content: json.content || '',
+          }
+        }
+      } catch (error) {
+        // 如果不是 JSON，返回空内容
+        return {
+          content: '',
+        }
+      }
+    }
+    
+    // 原来的逻辑：直接解析 JSON
+    try {
+      const stream = JSON.parse(readValue)
+      return {
+        content: stream.content || '',
+      }
+    } catch (error) {
+      return {
+        content: '',
+      }
     }
   },
 }
