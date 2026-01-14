@@ -218,7 +218,14 @@ class Text2SqlAgent:
 
                 # 打开新的步骤 (除了 summarize、data_render 和 error_handler) think_html 标签里面添加open属性控制思考过程是否默认展开显示
                 # error_handler 是异常节点，直接显示错误信息，不需要显示思考过程标签
-                if new_step not in ["summarize", "data_render", "error_handler"]:
+                # datasource_selector 和 question_recommender 也不展示思考过程
+                if new_step not in [
+                    "summarize",
+                    "data_render",
+                    "error_handler",
+                    "datasource_selector",
+                    "question_recommender",
+                ]:
                     think_html = f"""<details style="color:gray;background-color: #f8f8f8;padding: 2px;border-radius: 
                     6px;margin-top:5px;">
                                  <summary>{new_step}...</summary>"""
@@ -259,10 +266,16 @@ class Text2SqlAgent:
                 "error_message",
                 "当前没有可用的数据源，请联系管理员。",
             ),
-            "schema_inspector": lambda: self._format_db_info(step_value["db_info"]),
+            "schema_inspector": lambda: self._format_db_info_with_bm25(step_value),
             "table_relationship": lambda: json.dumps(step_value["table_relationship"], ensure_ascii=False),
             "sql_generator": lambda: step_value["generated_sql"],
-            "sql_executor": lambda: "执行sql语句成功" if step_value["execution_result"].success else "执行sql语句失败",
+            # 权限过滤节点：输出注入权限后的 SQL，如果没有则回退到原始 SQL
+            "permission_filter": lambda: step_value.get("filtered_sql")
+            or step_value.get("generated_sql", "No SQL query generated"),
+            # SQL 执行节点：成功/失败分别返回不同信息，失败时截取一段错误详情
+            "sql_executor": lambda: self._format_sql_execution_message(step_value.get("execution_result")),
+            # 图表生成节点：输出最终选定的图表类型
+            "chart_generator": lambda: self._format_chart_type_message(step_value),
             "summarize": lambda: step_value["report_summary"],
             "data_render": lambda: step_value.get("render_data", {}) if step_value.get("render_data") else {},  # 返回对象，不是 JSON 字符串
         }
@@ -278,7 +291,15 @@ class Text2SqlAgent:
 
             # 根据环境变量决定是否发送非关键步骤的内容
             # error_handler 是异常节点，必须发送错误信息给用户
-            should_send = self.show_thinking_process or step_name in ["summarize", "data_render", "error_handler"]
+            # schema_inspector 需要向用户解释 BM25 分词和表筛选结果，也应在不展示思考过程时输出
+            # chart_generator 需要向用户展示最终选定的图表类型，也应在不展示思考过程时输出
+            should_send = self.show_thinking_process or step_name in [
+                "summarize",
+                "data_render",
+                "error_handler",
+                "schema_inspector",
+                "chart_generator",
+            ]
 
             if should_send:
                 await self._send_response(response=response, content=content, data_type=data_type)
@@ -330,9 +351,102 @@ class Text2SqlAgent:
                 logger.warning(f"question_recommender 步骤: 推荐问题为空或格式错误，recommended_questions: {recommended_questions}")
 
     @staticmethod
+    def _format_sql_execution_message(execution_result: Any) -> str:
+        """
+        格式化 SQL 执行结果信息：
+        - 成功：返回固定成功提示
+        - 失败：返回带有部分错误信息的提示，避免错误信息过长
+        """
+        try:
+            if not execution_result:
+                return "执行sql语句失败"
+
+            # ExecutionResult 为 pydantic BaseModel，直接访问属性
+            success = getattr(execution_result, "success", False)
+            if success:
+                return "执行sql语句成功"
+
+            raw_error = getattr(execution_result, "error", "") or ""
+            # 截取前 200 个字符，避免返回过长
+            snippet = raw_error.strip().replace("\n", " ").replace("\r", " ")
+            max_len = 200
+            if len(snippet) > max_len:
+                snippet = snippet[:max_len] + "..."
+
+            # 最终返回给前端的提示
+            return f"执行sql语句失败: {snippet}" if snippet else "执行sql语句失败"
+        except Exception:
+            # 兜底，绝不因为格式化错误影响主流程
+            return "执行sql语句失败"
+
+    def _format_db_info_with_bm25(self, step_value: Dict[str, Any]) -> str:
+        """
+        格式化数据库信息，并追加 BM25 分词说明（如果有）。
+        格式：先显示关键词，再显示检索到的表信息。
+        """
+        db_info: Dict[str, Any] = step_value.get("db_info") or {}
+        
+        # 从 step_value 中获取 BM25 分词信息
+        bm25_tokens = step_value.get("bm25_tokens") or []
+        user_query = step_value.get("user_query", "")
+        
+        # 调试日志：检查 step_value 中的字段
+        logger.debug(f"schema_inspector step_value keys: {list(step_value.keys())}")
+        logger.debug(f"bm25_tokens in step_value: {bm25_tokens}, type: {type(bm25_tokens)}")
+        logger.debug(f"user_query in step_value: {user_query}")
+
+        # 构建输出内容：先关键词，后表信息
+        parts = []
+        
+        # 1. 关键词部分
+        if user_query:
+            if isinstance(bm25_tokens, list) and bm25_tokens:
+                # 过滤掉无意义的单字符词（如"的"、"各"等），保留有意义的词
+                meaningful_tokens = [token for token in bm25_tokens if len(token) > 1 or token.isalnum()]
+                # 如果过滤后还有词，使用过滤后的；否则使用原始的
+                display_tokens = meaningful_tokens if meaningful_tokens else bm25_tokens
+                
+                # 只展示前若干个分词，避免过长
+                max_tokens = 10
+                shown_tokens = display_tokens[:max_tokens]
+                tokens_str = "、".join(shown_tokens)
+                if len(display_tokens) > max_tokens:
+                    tokens_str += " 等"
+                
+                # 简洁格式：直接显示关键词
+                parts.append(f"关键词：{tokens_str}")
+                logger.info(f"BM25 分词说明已添加到输出: {tokens_str}")
+            else:
+                # 分词结果为空时，使用原始查询作为关键词
+                parts.append(f"关键词：{user_query}")
+                logger.info(f"BM25 分词结果为空，使用原始查询作为关键词: {user_query}")
+        
+        # 2. 表信息部分（放在关键词下面）
+        table_text = self._format_db_info_compact(db_info)
+        if table_text:
+            parts.append(table_text)
+        
+        # 组合输出
+        return "\n\n".join(parts) if parts else table_text
+
+    @staticmethod
+    def _format_chart_type_message(step_value: Dict[str, Any]) -> str:
+        """
+        格式化图表类型说明，优先从 chart_config 中读取 type，其次从 chart_type 字段读取。
+        """
+        chart_config = step_value.get("chart_config") or {}
+        chart_type = (
+            (chart_config.get("type") if isinstance(chart_config, dict) else None)
+            or step_value.get("chart_type")
+            or "table"
+        )
+        # 简单直观的提示语
+        return f"图表类型：{chart_type}"
+
+    @staticmethod
     def _format_db_info(db_info: Dict[str, Any]) -> str:
         """
-        格式化数据库信息，包含表名和注释
+        格式化数据库信息，包含表名和注释（旧格式，保持向后兼容）
         :param db_info: 数据库信息
         :return: 格式化后的字符串
         """
@@ -350,6 +464,30 @@ class Text2SqlAgent:
 
         tables_str = "、".join(table_descriptions)
         return f"共检索{len(db_info)}张表: {tables_str}."
+
+    @staticmethod
+    def _format_db_info_compact(db_info: Dict[str, Any]) -> str:
+        """
+        格式化数据库信息，简洁格式：每行一个表，表名和注释分开显示
+        :param db_info: 数据库信息
+        :return: 格式化后的字符串
+        """
+        if not db_info:
+            return "检索到 0 张表"
+
+        table_count = len(db_info)
+        table_lines = []
+        
+        for table_name, table_info in db_info.items():
+            # 获取表注释
+            table_comment = table_info.get("table_comment", "")
+            if table_comment:
+                table_lines.append(f"  • {table_name} - {table_comment}")
+            else:
+                table_lines.append(f"  • {table_name}")
+        
+        tables_text = "\n".join(table_lines)
+        return f"检索到 {table_count} 张表：\n{tables_text}"
 
     @staticmethod
     async def _send_response(

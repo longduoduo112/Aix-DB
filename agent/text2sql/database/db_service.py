@@ -868,8 +868,24 @@ class DatabaseService:
             user_query = state.get("user_query", "").strip()
             if not user_query:
                 state["db_info"] = all_table_info
+                state["bm25_tokens"] = []  # 无查询时，分词列表为空
                 logger.info(f"ℹ️ 无用户查询，返回全部 {len(all_table_info)} 张表")
                 return state
+
+            # 记录 BM25 分词信息，便于在 schema_inspector 节点向用户解释
+            try:
+                bm25_tokens = self._tokenize_text(user_query)
+                state["bm25_tokens"] = bm25_tokens
+                if bm25_tokens:
+                    logger.info(f"✅ BM25 分词成功: {len(bm25_tokens)} 个词: {bm25_tokens[:5]}")
+                else:
+                    logger.warning(f"⚠️ BM25 分词结果为空，用户查询: {user_query}")
+            except Exception as e:
+                logger.error(f"❌ BM25 分词记录失败: {e}", exc_info=True)
+                state["bm25_tokens"] = []  # 分词失败时，设置为空列表
+            
+            # 确保 user_query 也在返回的 state 中（虽然它应该已经在初始 state 中了）
+            state["user_query"] = user_query
 
             # 初始化向量索引
             self._initialize_vector_index(all_table_info)
@@ -937,6 +953,11 @@ class DatabaseService:
             logger.error(f"❌ 获取数据库表信息失败: {e}", exc_info=True)
             state["db_info"] = {}
             state["execution_result"] = ExecutionResult(success=False, error="无法连接数据库或获取元数据")
+            # 即使出错，也确保 bm25_tokens 和 user_query 被设置
+            if "bm25_tokens" not in state:
+                state["bm25_tokens"] = []
+            if "user_query" not in state:
+                state["user_query"] = state.get("user_query", "")
 
         return state
 
