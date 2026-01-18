@@ -471,14 +471,55 @@ const bottomIcons = [
 </template>
 
 <style scoped lang="scss">
+// ============================================
+// 设计系统变量
+// ============================================
+$font-family-base: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+$font-family-display: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+
+// 主题色系
+$primary-color: #6366f1;  // Indigo 500 - 主色调
+$primary-light: #818cf8;  // Indigo 400
+$primary-dark: #4f46e5;   // Indigo 600
+$primary-bg: rgba(99, 102, 241, 0.08);
+$primary-border: rgba(99, 102, 241, 0.2);
+
+// 功能色
+$success-color: #10b981;
+$warning-color: #f59e0b;
+$info-color: #8b5cf6;
+
+// 中性色
+$text-primary: #1e293b;
+$text-secondary: #64748b;
+$text-muted: #94a3b8;
+$border-color: #e2e8f0;
+$bg-subtle: #f8fafc;
+
+// 圆角
+$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 16px;
+$radius-xl: 24px;
+$radius-full: 9999px;
+
+// 阴影
+$shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+$shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+$shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+$shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+// ============================================
+// 基础布局
+// ============================================
 .default-page-container {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100%;
   width: 100%;
-  background-color: #fff;
-  position: relative; /* 仅用于定位左上角下拉框，不影响中间内容布局 */
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  position: relative;
 }
 
 .content-wrapper {
@@ -487,24 +528,70 @@ const bottomIcons = [
   align-items: center;
   width: 100%;
   max-width: 900px;
-  padding: 0 20px;
+  padding: 0 24px;
   position: relative;
-  top: -40px; /* Visual optical adjustment to move slightly up */
+  top: -40px;
 }
 
-/* 模型选择下拉框：左上角位置，与对话页面保持一致 */
+// ============================================
+// 模型选择器
+// ============================================
 .model-select-top-left {
   position: absolute;
-  top: 12px;
+  top: 16px;
   left: 24px;
   z-index: 10;
 }
 
+.model-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: $radius-sm;
+  border: 1px solid transparent;
+
+  &:hover {
+    background-color: $bg-subtle;
+    border-color: $border-color;
+
+    .model-dropdown-icon {
+      color: $text-secondary;
+      transform: translateY(1px);
+    }
+  }
+}
+
+.model-dropdown-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-primary;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  font-family: $font-family-base;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.model-dropdown-icon {
+  font-size: 16px;
+  color: $text-muted;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ============================================
+// 标题区域
+// ============================================
 .header-section {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 32px;
   width: 100%;
 }
 
@@ -512,19 +599,19 @@ const bottomIcons = [
   position: relative;
   display: inline-flex;
   align-items: center;
-  font-size: 72px;
-  font-weight: 800;
+  font-size: 64px;
+  font-weight: 700;
   line-height: 1;
   height: auto;
   margin: 0;
-  letter-spacing: -0.04em;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.03em;
+  font-family: $font-family-display;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #822dff 0%, #3e45ff 50%, #3ec4fa 100%);
+  background: linear-gradient(135deg, $primary-color 0%, $primary-light 50%, #06b6d4 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -537,72 +624,34 @@ const bottomIcons = [
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  margin: 0 2px;
+  margin: 0 4px;
 }
 
 .star-icon {
   position: absolute;
-  top: -12px;
-  right: -8px;
+  top: -10px;
+  right: -6px;
   left: auto;
-  transform: rotate(15deg);
-  filter: drop-shadow(0 0 8px rgba(130, 45, 255, 0.4));
+  transform: rotate(12deg);
+  filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
   animation: float 3s ease-in-out infinite;
 }
 
 @keyframes float {
-  0%, 100% { transform: rotate(15deg) translateY(0); }
-  50% { transform: rotate(15deg) translateY(-3px); }
+  0%, 100% { transform: rotate(12deg) translateY(0); }
+  50% { transform: rotate(12deg) translateY(-4px); }
 }
 
-/* 模型下拉框样式，使用 Naive UI Dropdown 风格 */
-.model-dropdown-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 6px;
-  
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.06);
-    
-    .model-dropdown-icon {
-      color: #6b7280;
-    }
-  }
-}
-
-.model-dropdown-label {
-  font-size: 15px;
-  font-weight: 500;
-  color: #1f2937;
-  line-height: 1.4;
-  letter-spacing: -0.01em;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.model-dropdown-icon {
-  font-size: 14px;
-  color: #9ca3af;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Input Card Styles matching chat.vue */
-
+// ============================================
+// 输入卡片
+// ============================================
 .input-card {
   width: 100%;
-  max-width: 890px;
+  max-width: 880px;
   background-color: #fff;
-  border-radius: 24px;
-  box-shadow: 0 10px 40px -10px rgb(0 0 0 / 8%);
-  border: 1px solid #f1f5f9;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-lg;
+  border: 1px solid $border-color;
   padding: 24px;
   position: relative;
   display: flex;
@@ -610,9 +659,14 @@ const bottomIcons = [
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    box-shadow: 0 20px 50px -12px rgb(0 0 0 / 12%);
-    border-color: #e2e8f0;
+    box-shadow: $shadow-xl;
+    border-color: darken($border-color, 5%);
     transform: translateY(-2px);
+  }
+
+  &:focus-within {
+    border-color: $primary-light;
+    box-shadow: $shadow-xl, 0 0 0 3px $primary-bg;
   }
 }
 
@@ -629,11 +683,11 @@ const bottomIcons = [
   --n-box-shadow-focus: none !important;
 
   background-color: transparent !important;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  font-size: 16px;
+  font-family: $font-family-base;
+  font-size: 15px;
   font-weight: 400;
-  line-height: 1.625;
-  letter-spacing: 0;
+  line-height: 1.7;
+  letter-spacing: -0.01em;
   padding: 0;
   flex: 1;
   -webkit-font-smoothing: antialiased;
@@ -642,151 +696,199 @@ const bottomIcons = [
   :deep(.n-input__textarea-el) {
     padding: 0;
     min-height: 80px;
-    line-height: 1.625;
-    color: #1a1a1a;
-    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-    font-size: 16px;
+    line-height: 1.7;
+    color: $text-primary;
+    font-family: $font-family-base;
+    font-size: 15px;
     font-weight: 400;
-    letter-spacing: 0;
+    letter-spacing: -0.01em;
   }
 
   :deep(.n-input__placeholder) {
-    color: #94a3b8;
+    color: $text-muted;
   }
 }
 
+// ============================================
+// 底部操作区
+// ============================================
 .input-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba($border-color, 0.5);
 }
 
 .mode-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: $radius-full;
+  font-family: $font-family-base;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
   border: 1px solid transparent;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: default;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  .text-16 {
+    font-size: 16px;
+  }
 }
 
 .inner-chip {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: $radius-full;
+  font-family: $font-family-base;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: 0.01em;
-  color: #64748b;
+  letter-spacing: 0;
+  color: $text-secondary;
   cursor: pointer;
-  transition: all 0.2s;
-  background-color: #f8fafc;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: $bg-subtle;
   border: 1px solid transparent;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  &:hover, &.active-chip {
-    background-color: #f1f5f9;
-    color: #334155;
-    border-color: #e2e8f0;
+  .text-14 {
+    font-size: 16px;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    background-color: darken($bg-subtle, 3%);
+    color: $text-primary;
+    border-color: $border-color;
+    transform: translateY(-1px);
+
+    .text-14 {
+      transform: scale(1.1);
+    }
+  }
+
+  &.active-chip {
+    background-color: $primary-bg;
+    color: $primary-color;
+    border-color: $primary-border;
   }
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
-}
-
+// ============================================
+// 操作图标
+// ============================================
 .action-icon {
-  font-size: 20px;
-  color: #6b7280;
+  font-size: 22px;
+  color: $text-secondary;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.2s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  padding: 6px;
+  border-radius: $radius-sm;
 
   &:hover {
-    color: #374151;
+    color: $text-primary;
+    background-color: $bg-subtle;
   }
 }
 
 .send-btn-circle {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background-color: #7E6BF2;
+  background: linear-gradient(135deg, $primary-color 0%, $primary-dark 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgb(126 107 242 / 30%);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba($primary-color, 0.35);
+
+  .text-20 {
+    font-size: 18px;
+  }
 
   &:hover:not(.disabled) {
-    background-color: #6b5ae0;
-    transform: scale(1.05);
+    transform: scale(1.08) translateY(-1px);
+    box-shadow: 0 6px 16px rgba($primary-color, 0.45);
+  }
+
+  &:active:not(.disabled) {
+    transform: scale(0.95);
   }
 
   &.disabled {
-    background-color: #e5e7eb;
+    background: $border-color;
     cursor: not-allowed;
     box-shadow: none;
     opacity: 0.6;
 
-    .i-hugeicons:arrow-up-01 {
-      color: #9ca3af;
+    .i-hugeicons\\:arrow-up-01 {
+      color: $text-muted;
     }
   }
 }
 
-/* 表格问答模式提示样式 */
+// ============================================
+// 表格问答提示
+// ============================================
 .table-qa-hint {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  margin-top: 8px;
-  background-color: #fef3c7;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  background-color: #fffbeb;
   border: 1px solid #fde68a;
-  border-radius: 8px;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  border-radius: $radius-md;
+  font-family: $font-family-base;
   font-size: 13px;
   color: #92400e;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
+
   .hint-icon {
-    font-size: 16px;
-    color: #f59e0b;
+    font-size: 18px;
+    color: $warning-color;
     flex-shrink: 0;
   }
-  
+
   .hint-text {
-    line-height: 1.4;
+    line-height: 1.5;
     flex: 1;
+    font-weight: 450;
+  }
+}
+
+// ============================================
+// 滚动条
+// ============================================
+.custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $border-color;
+    border-radius: 3px;
+
+    &:hover {
+      background: darken($border-color, 10%);
+    }
   }
 }
 </style>

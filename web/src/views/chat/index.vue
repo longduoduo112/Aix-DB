@@ -2269,238 +2269,279 @@ const handleHistoryClick = async (item: any) => {
 </template>
 
 <style lang="scss" scoped>
-/* Sidebar Styles */
+// ============================================
+// 设计系统变量 - 与 default-page.vue 保持一致
+// ============================================
+$font-family-base: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+$font-family-display: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
 
+// 主题色系
+$primary-color: #6366f1;
+$primary-light: #818cf8;
+$primary-dark: #4f46e5;
+$primary-bg: rgba(99, 102, 241, 0.08);
+$primary-border: rgba(99, 102, 241, 0.2);
+
+// 中性色
+$text-primary: #1e293b;
+$text-secondary: #64748b;
+$text-muted: #94a3b8;
+$border-color: #e2e8f0;
+$bg-subtle: #f8fafc;
+$bg-sidebar: #fafbfc;
+
+// 圆角
+$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 16px;
+$radius-xl: 20px;
+$radius-full: 9999px;
+
+// 阴影
+$shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+$shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+$shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+// ============================================
+// 侧边栏样式
+// ============================================
 .qianwen-sidebar {
-  background-color: #fff;
-  border-right: 1px solid #fff;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+  background-color: $bg-sidebar;
+  border-right: 1px solid $border-color;
+  font-family: $font-family-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
-  // 确保侧边栏内所有文本使用正确的字体
+
   * {
-    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+    font-family: $font-family-base;
   }
 }
 
-
 .new-chat-btn {
-  transition: all 0.2s ease;
-}
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: $font-family-base;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 
-.new-chat-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgb(99 102 241 / 20%);
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba($primary-color, 0.2);
+    border-color: $primary-light;
+    color: $primary-color;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .history-item {
-  transition: all 0.2s;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: $font-family-base;
   font-weight: 400;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
-  // 确保内部文本也使用正确的字体
+  border-radius: $radius-md;
+
   * {
-    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+    font-family: $font-family-base;
+  }
+
+  &:hover {
+    background-color: darken($bg-subtle, 2%);
   }
 }
 
-.history-label,
-.loading-text,
-.history-item-text,
-.model-name {
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+.history-label {
+  font-family: $font-family-base;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 11px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 模型下拉框样式，使用 Naive UI Dropdown 风格 */
+.loading-text,
+.history-item-text {
+  font-family: $font-family-base;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.model-name {
+  font-family: $font-family-base;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// ============================================
+// 模型下拉框
+// ============================================
 .model-dropdown-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 8px;
+  padding: 8px 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 6px;
-  
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: $radius-sm;
+  border: 1px solid transparent;
+
   &:hover {
-    background-color: rgba(0, 0, 0, 0.06);
-    
+    background-color: $bg-subtle;
+    border-color: $border-color;
+
     .model-dropdown-icon {
-      color: #6b7280;
+      color: $text-secondary;
+      transform: translateY(1px);
     }
   }
 }
 
 .model-dropdown-label {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
-  color: #1f2937;
+  color: $text-primary;
   line-height: 1.4;
   letter-spacing: -0.01em;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-family: $font-family-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .model-dropdown-icon {
-  font-size: 14px;
-  color: #9ca3af;
+  font-size: 16px;
+  color: $text-muted;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.history-item-text {
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: 0;
-}
-
-.model-name {
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-
+// ============================================
 // 对话内容区域
+// ============================================
 .conversation-item {
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+  font-family: $font-family-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
-  // 确保用户消息和AI回复都使用正确的字体
+
   > div {
-    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+    font-family: $font-family-base;
   }
 }
 
-/* Custom Scrollbar for History List */
-
+// ============================================
+// 滚动条样式
+// ============================================
 .custom-scrollbar {
   overflow-y: auto;
+
+  &.overflow-y-scroll {
+    overflow-y: scroll;
+    min-height: 0;
+  }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $border-color;
+    border-radius: 3px;
+
+    &:hover {
+      background: darken($border-color, 15%);
+    }
+  }
 }
 
-/* 当需要强制显示滚动条时，使用 scroll 而非 auto，确保滚动条始终可见 */
-.custom-scrollbar.overflow-y-scroll {
-  overflow-y: scroll;
-  /* 当内容不足以滚动时，添加最小高度以确保可以触发滚动事件 */
-  min-height: 0;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  background-clip: padding-box;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa;
-}
-
-/* 对话历史列表滚动条：参考千问网站风格，hover 时显示 */
-/* 使用更具体的选择器确保覆盖 .custom-scrollbar 的样式 */
+// 历史记录列表滚动条 - hover 显示
 .custom-scrollbar.history-list-scrollbar {
-  /* 默认隐藏滚动条 */
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* IE 10+ */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    transition: width 0.2s ease;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 3px;
+  }
+
+  &:hover {
+    scrollbar-width: thin;
+    -ms-overflow-style: auto;
+
+    &::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $border-color;
+
+      &:hover {
+        background: darken($border-color, 15%);
+      }
+    }
+  }
 }
 
-.custom-scrollbar.history-list-scrollbar::-webkit-scrollbar {
-  width: 0 !important; /* 默认隐藏滚动条 */
-  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.custom-scrollbar.history-list-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar.history-list-scrollbar::-webkit-scrollbar-thumb {
-  background: transparent !important;
-  border-radius: 3px;
-}
-
-/* hover 时显示滚动条 */
-.custom-scrollbar.history-list-scrollbar:hover {
-  scrollbar-width: thin !important; /* Firefox */
-  -ms-overflow-style: auto !important; /* IE 10+ */
-}
-
-.custom-scrollbar.history-list-scrollbar:hover::-webkit-scrollbar {
-  width: 5px !important; /* hover 时显示，宽度 5px（更精致） */
-}
-
-.custom-scrollbar.history-list-scrollbar:hover::-webkit-scrollbar-thumb {
-  background: #d1d5db !important; /* 柔和的浅灰色，美观协调 */
-  border-radius: 3px;
-  border: 0;
-  background-clip: padding-box;
-  transition: background 0.15s ease;
-}
-
-.custom-scrollbar.history-list-scrollbar:hover::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af !important; /* hover 时稍深的中灰色，视觉反馈更清晰 */
-}
-
-/* Top Header Styles */
-
+// ============================================
+// 顶部头部
+// ============================================
 .top-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 24px;
+  padding: 14px 24px;
   background-color: #fff;
-
-  /* border-bottom: 1px solid #f0f0f0; */
-
-  /* Image shows no obvious border, or very subtle. Removing for cleaner look matching image */
+  border-bottom: 1px solid rgba($border-color, 0.5);
 }
 
 .model-info {
   display: flex;
   align-items: center;
-
-  /* gap: 8px; */
-
-  color: #333;
-
-  /* font-weight: 600; */
+  color: $text-primary;
 }
 
 .model-icon {
-  color: #8b5cf6;
-  font-size: 16px;
+  color: $primary-color;
+  font-size: 18px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .badge {
-  background-color: #f3f4f6;
-  padding: 2px 8px;
-  border-radius: 4px;
+  background-color: $bg-subtle;
+  padding: 4px 10px;
+  border-radius: $radius-sm;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: 0.01em;
-  color: #666;
+  letter-spacing: 0;
+  color: $text-secondary;
+  font-family: $font-family-base;
 }
 
-/* Bottom Input Area Styles (C Style) */
-
+// ============================================
+// 底部输入区域
+// ============================================
 .bottom-input-container {
   padding: 20px 0;
   background-color: transparent;
@@ -2512,67 +2553,88 @@ const handleHistoryClick = async (item: any) => {
 
 .input-card {
   width: 100%;
-  max-width: 890px;
+  max-width: 880px;
   background-color: #fff;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgb(0 0 0 / 8%);
-  border: 1px solid #e5e7eb;
-  padding: 16px 20px;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-lg;
+  border: 1px solid $border-color;
+  padding: 18px 22px;
   position: relative;
   display: flex;
   flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:focus-within {
+    border-color: $primary-light;
+    box-shadow: $shadow-lg, 0 0 0 3px $primary-bg;
+  }
 }
 
 .input-wrapper {
-  /* display: flex; align-items: flex-start; gap: 8px; */
-
   width: 100%;
 }
 
 .mode-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 20px;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: $radius-full;
+  font-family: $font-family-base;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
   border: 1px solid transparent;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: default;
+
+  .text-16 {
+    font-size: 16px;
+  }
 }
 
 .mode-icon-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.2s;
-    background-color: #f8fafc;
-    border: 1px solid transparent;
-  
-    &:hover, &.active {
-      background-color: #f1f5f9;
-      color: #334155;
-    }
-  
-    &.active {
-      color: var(--active-color);
-      background-color: var(--active-bg);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: $radius-full;
+  font-family: $font-family-base;
+  font-size: 13px;
+  color: $text-secondary;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: $bg-subtle;
+  border: 1px solid transparent;
+
+  .text-14 {
+    font-size: 16px;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    background-color: darken($bg-subtle, 3%);
+    color: $text-primary;
+    border-color: $border-color;
+
+    .text-14 {
+      transform: scale(1.1);
     }
   }
+
+  &.active {
+    color: var(--active-color);
+    background-color: var(--active-bg);
+    border-color: transparent;
+  }
+}
 
 .mode-icon-label {
   font-size: 13px;
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 .custom-chat-input {
@@ -2583,28 +2645,29 @@ const handleHistoryClick = async (item: any) => {
   --n-box-shadow-focus: none !important;
 
   background-color: transparent !important;
-  font-size: 16px;
+  font-family: $font-family-base;
+  font-size: 15px;
   font-weight: 400;
-  line-height: 1.625;
-  letter-spacing: 0;
+  line-height: 1.7;
+  letter-spacing: -0.01em;
   padding: 0;
   flex: 1;
 
   :deep(.n-input__textarea-el) {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-    font-size: 16px;
+    font-family: $font-family-base;
+    font-size: 15px;
     font-weight: 400;
-    line-height: 1.625;
-    letter-spacing: 0;
+    line-height: 1.7;
+    letter-spacing: -0.01em;
     padding: 0;
-    color: #1a1a1a;
+    color: $text-primary;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 40px;
   }
 
   :deep(.n-input__placeholder) {
-    color: #9ca3af;
+    color: $text-muted;
   }
 }
 
@@ -2612,53 +2675,70 @@ const handleHistoryClick = async (item: any) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba($border-color, 0.5);
 }
 
 .action-icon {
-  font-size: 20px;
-  color: #6b7280;
+  font-size: 22px;
+  color: $text-secondary;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.2s ease;
+  padding: 6px;
+  border-radius: $radius-sm;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 
   &:hover {
-    color: #374151;
+    color: $text-primary;
+    background-color: $bg-subtle;
   }
 }
 
 .send-btn-circle {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background-color: #7E6BF2;
+  background: linear-gradient(135deg, $primary-color 0%, $primary-dark 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgb(126 107 242 / 30%);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba($primary-color, 0.35);
 
-  &:hover {
-    background-color: #6b5ae0;
-    transform: scale(1.05);
+  .text-20, .text-18 {
+    font-size: 18px;
+  }
+
+  &:hover:not(.disabled) {
+    transform: scale(1.08) translateY(-1px);
+    box-shadow: 0 6px 16px rgba($primary-color, 0.45);
+  }
+
+  &:active:not(.disabled) {
+    transform: scale(0.95);
   }
 
   &.disabled {
-    background-color: #e5e7eb;
+    background: $border-color;
     cursor: not-allowed;
     box-shadow: none;
 
-    .i-hugeicons:arrow-up-01 {
-      color: #9ca3af;
+    .i-hugeicons\\:arrow-up-01 {
+      color: $text-muted;
     }
   }
 }
 
 .footer-note {
+  font-family: $font-family-base;
   font-size: 12px;
-  color: #d1d5db;
-  margin-top: 8px;
+  color: $text-muted;
+  margin-top: 10px;
   text-align: center;
+  letter-spacing: 0;
 }
 
 
@@ -2700,163 +2780,102 @@ const handleHistoryClick = async (item: any) => {
   }
 }
 
+// ============================================
+// 主滚动容器
+// ============================================
 .scrollable-container {
-  overflow-y: auto; // 添加纵向滚动条
+  overflow-y: auto;
   height: 100%;
-  padding-bottom: 20px; // 底部内边距，防止内容被遮挡
+  padding-bottom: 20px;
   background-color: #fff;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+  font-family: $font-family-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  
-  // 确保对话内容区域使用正确的字体
+
   *:not(code):not(pre):not(kbd):not(samp) {
-    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+    font-family: $font-family-base;
   }
 }
 
-/* 滚动条整体部分 */
-
+// 全局滚动条样式
 ::-webkit-scrollbar {
-  width: 6px; /* 竖向滚动条宽度 */
-  height: 6px; /* 横向滚动条高度 */
+  width: 6px;
+  height: 6px;
 }
-
-/* 滚动条的轨道 */
 
 ::-webkit-scrollbar-track {
-  background: #fff; /* 轨道背景色 */
+  background: #fff;
 }
-
-/* 滚动条的滑块 */
 
 ::-webkit-scrollbar-thumb {
-  background: #cac9f9; /* 滑块颜色 */
-  border-radius: 6px; /* 滑块圆角 */
-  border: 1px solid transparent;
-  background-clip: padding-box;
+  background: lighten($primary-color, 30%);
+  border-radius: 3px;
+
+  &:hover {
+    background: lighten($primary-color, 20%);
+  }
 }
 
-/* 滚动条的滑块在悬停状态下的样式 */
+// ============================================
+// 自定义表格
+// ============================================
+:deep(.custom-table) {
+  .n-data-table-thead {
+    display: none;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #a8a4f0; /* 悬停时滑块颜色 */
+  .n-data-table-table {
+    border-collapse: collapse;
+  }
+
+  .n-data-table-th,
+  .n-data-table-td {
+    border: none;
+  }
+
+  td {
+    color: $text-primary;
+    padding: 12px 24px;
+    background-color: #fff;
+    transition: background-color 0.2s ease;
+    font-family: $font-family-base;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .selected-row td {
+    color: $primary-color !important;
+    font-weight: 500;
+    padding: 12px 24px !important;
+    background: linear-gradient(to bottom, #fff, $primary-bg);
+    transition: all 0.2s ease;
+  }
 }
 
-:deep(.custom-table .n-data-table-thead) {
-  display: none;
-}
-
-:deep(.custom-table .n-data-table-table) {
-  border-collapse: collapse;
-}
-
-:deep(.custom-table .n-data-table-th),
-:deep(.custom-table .n-data-table-td) {
-  border: none;
-}
-
-:deep(.custom-table td) {
-  color: #1a1a1a;
-  padding: 12px 30px;
-  background-color: #fff;
-  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.625;
-  letter-spacing: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  font-feature-settings: "kern" 1, "liga" 1;
-}
-
-:deep(.custom-table .selected-row td) {
-  color: #615ced !important;
-  font-weight: bold;
-  padding: 12px 30px !important;
-  background: linear-gradient(to bottom, #fff, #f9f9ff);
-  transform: scale(1.001);
-  transition: all 0.3s ease;
-}
-
+// ============================================
+// 页面布局
+// ============================================
 .default-page {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh; /* 使容器高度占满整个视口 */
-  background-color: #f6f7fb; /* 可选：设置背景颜色 */
+  height: 100vh;
+  background-color: $bg-subtle;
 }
 
 .active-tab {
-  // background: linear-gradient(to left, #f3f2ff, #e1e7fe);
-
-  background: linear-gradient(to left, #f0effe, #d4eefc);
-  border-color: #635eed;
-  color: #635eed;
-}
-
-/* 列表项动画 */
-.list-move,
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.3s ease;
-}
-
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-  transform: translateX(-20px);
-}
-
-/* 确保离开的项目从布局流中移除，以便其他项目可以平滑移动 */
-.list-leave-active {
-  position: absolute;
-  width: 100%; 
-}
-
-/* 页面切换动画 */
-.page-fade-enter-active,
-.page-fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.page-fade-enter-from {
-  opacity: 0;
-  transform: translateY(10px);
-}
-
-.page-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-/* 保持原有的 fade 动画兼容性，或者直接更新它 */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-@keyframes spin {
-
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
+  background: linear-gradient(to left, $primary-bg, rgba($primary-light, 0.15));
+  border-color: $primary-color;
+  color: $primary-color;
 }
 
 .custom-layout {
-  border-top-left-radius: 10px;
+  border-top-left-radius: $radius-md;
   background-color: #fff;
 }
 
@@ -2866,174 +2885,226 @@ const handleHistoryClick = async (item: any) => {
 }
 
 .content {
-  border-right:1px solid #fff;
+  border-right: 1px solid rgba($border-color, 0.5);
   background-color: #fff;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-family: $font-family-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
 .footer {
-  border-bottom-left-radius: 10px;
+  border-bottom-left-radius: $radius-md;
 }
 
+// ============================================
+// 动画
+// ============================================
+.list-move,
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(-16px);
+}
+
+.list-leave-active {
+  position: absolute;
+  width: 100%;
+}
+
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// ============================================
+// 图标按钮
+// ============================================
 .icon-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px; /* 可根据需要调整 */
-  height: 38px; /* 与宽度相同，形成圆形 */
-  border-radius: 100%; /* 圆形 */
-  border: 1px solid #e8eaf3;
-  background-color: #fff; /* 按钮背景颜色 */
-  cursor: pointer;
-  transition: background-color 0.3s; /* 平滑过渡效果 */
-  position: relative; /* 相对定位 */
-}
-
-.icon-button.selected {
-  border: 1px solid #a48ef4;
-}
-
-.icon-button:hover {
-  border: 1px solid #a48ef4; /* 鼠标悬停时的颜色 */
-}
-
-
-/** 自定义对话历史表格滚动条样式 */
-
-.scrollable-table-container {
-  overflow-y: hidden; /* 默认隐藏滚动条 */
-  height: 100%; /* 根据实际情况调整高度 */
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid $border-color;
   background-color: #fff;
-  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+
+  &.selected,
+  &:hover {
+    border-color: $primary-light;
+    box-shadow: 0 0 0 3px $primary-bg;
+  }
 }
 
-.scrollable-table-container:hover {
-  overflow-y: auto; /* 鼠标悬停时显示滚动条 */
+// ============================================
+// 表格容器滚动条
+// ============================================
+.scrollable-table-container {
+  overflow-y: hidden;
+  height: 100%;
+  background-color: #fff;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    overflow-y: auto;
+  }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $border-color;
+    border-radius: 3px;
+
+    &:hover {
+      background-color: darken($border-color, 15%);
+    }
+  }
 }
 
-/* 隐藏滚动条轨道 */
-
-.scrollable-table-container::-webkit-scrollbar {
-  width: 6px; /* 滚动条宽度 */
-}
-
-.scrollable-table-container::-webkit-scrollbar-track {
-  background: transparent; /* 滚动条轨道背景透明 */
-}
-
-.scrollable-table-container::-webkit-scrollbar-thumb {
-  background-color: #d1d5db; /* 滚动条颜色 */
-  border-radius: 6px; /* 滚动条圆角 */
-  border: 1px solid transparent;
-  background-clip: padding-box;
-}
-
-.scrollable-table-container::-webkit-scrollbar-thumb:hover {
-  background-color: #9ca3af; /* 悬停时滚动条颜色 */
-}
-
-/* 一键到底部按钮样式，底部居中显示 */
-
+// ============================================
+// 滚动到底部按钮
+// ============================================
 .scroll-to-bottom-btn {
   position: absolute;
-  bottom: 145px; /* 距离底部的距离 */
+  bottom: 145px;
   left: 50%;
-  transform: translateX(-50%); /* 水平居中 */
-  width: 30px;
-  height: 30px;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background-color: #fff;
-  box-shadow: 0 4px 15px rgb(0 0 0 / 20%);
+  box-shadow: $shadow-lg;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 100;
-  transition: all 0.3s ease;
-  border: 1px solid #e8eaf3;
-  backdrop-filter: blur(5px);
-}
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid $border-color;
+  backdrop-filter: blur(8px);
 
-.scroll-to-bottom-btn:hover {
-  background-color: #f6f7fb;
-  transform: translateX(-50%) scale(1.1); /* 悬停时放大 */
-  box-shadow: 0 6px 20px rgb(0 0 0 / 25%);
-}
+  &:hover {
+    background-color: $bg-subtle;
+    transform: translateX(-50%) scale(1.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border-color: $primary-light;
+  }
 
-.scroll-to-bottom-btn::before {
-  content: "";
-  position: absolute;
-  width: 200%;
-  height: 200%;
-  top: -50%;
-  left: -50%;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
+  &::before {
+    content: "";
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    top: -50%;
+    left: -50%;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
 }
 
 @keyframes pulse {
-
   0% {
     transform: scale(0.5);
     opacity: 0;
   }
-
   50% {
     transform: scale(1);
-    opacity: 0.2;
+    opacity: 0.15;
+    background: $primary-bg;
   }
-
   100% {
     transform: scale(1.5);
     opacity: 0;
   }
 }
 
+// ============================================
+// 文件上传列表
+// ============================================
 .upload-wrapper-list {
   --at-apply: flex flex-wrap gap-10 items-center;
   --at-apply: pb-12;
 }
 
+// ============================================
+// 搜索输入框
+// ============================================
 .search-input-custom {
-  --n-border: 1px solid #E6E6E6 !important;
-  --n-border-hover: 1px solid #7E6BF2 !important;
-  --n-border-focus: 1px solid #7E6BF2 !important;
-  --n-box-shadow-focus: 0 0 0 2px rgb(126 107 242 / 10%) !important;
-  --n-caret-color: #7E6BF2 !important;
+  --n-border: 1px solid #{$border-color} !important;
+  --n-border-hover: 1px solid #{$primary-light} !important;
+  --n-border-focus: 1px solid #{$primary-color} !important;
+  --n-box-shadow-focus: 0 0 0 3px #{$primary-bg} !important;
+  --n-caret-color: #{$primary-color} !important;
 
   :deep(.n-input__input-el) {
     height: 38px !important;
+    font-family: $font-family-base;
   }
 
-  :deep(.n-input__border) {
-    border-radius: 8px !important;
-  }
-
+  :deep(.n-input__border),
   :deep(.n-input__state-border) {
-    border-radius: 8px !important;
+    border-radius: $radius-sm !important;
   }
 }
 
-/* 对话历史加载提示样式 - 轻量且平滑，统一的基础动画样式 */
+// ============================================
+// 加载指示器
+// ============================================
 .conversation-loading-indicator {
   animation: fadeIn 0.2s ease-in;
   will-change: opacity;
+  font-family: $font-family-base;
 }
 
-/* 底部“加载更多...”固定在对话区域底部居中显示 */
 .conversation-loading-indicator--bottom {
   position: sticky;
   bottom: 0;
   left: 0;
   width: 100%;
   justify-content: center;
-  background: linear-gradient(to top, #fff 80%, rgba(255, 255, 255, 0)); // 与内容自然过渡
+  background: linear-gradient(to top, #fff 80%, rgba(255, 255, 255, 0));
 }
 
-/* 顶部“加载更早的消息...”保持默认位置，仅做轻微背景衬托 */
 .conversation-loading-indicator--top {
   width: 100%;
   justify-content: center;
@@ -3041,105 +3112,83 @@ const handleHistoryClick = async (item: any) => {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* 星星动画样式 */
+// ============================================
+// 星星加载动画
+// ============================================
 .star-spinner {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   position: relative;
+
+  svg {
+    transform-origin: 12px 12px;
+  }
+
+  .star-center {
+    transform-origin: 12px 12px;
+    animation: starTwinkle 1.5s ease-in-out infinite;
+  }
+
+  .star-1,
+  .star-2,
+  .star-3,
+  .star-4 {
+    transform-origin: 0 0;
+    animation: starOrbit 3s linear infinite, starTwinkle 1.5s ease-in-out infinite;
+  }
+
+  .star-1 { animation-delay: 0s, 0s; }
+  .star-2 { animation-delay: 0s, 0.3s; }
+  .star-3 { animation-delay: 0s, 0.6s; }
+  .star-4 { animation-delay: 0s, 0.9s; }
+
+  .star-path {
+    transform-origin: center;
+    fill: $primary-light;
+  }
 }
 
-.star-spinner svg {
-  transform-origin: 12px 12px;
-}
-
-/* 中心星星保持静止，只闪烁 */
-.star-spinner .star-center {
-  transform-origin: 12px 12px;
-  animation: starTwinkle 1.5s ease-in-out infinite;
-}
-
-/* 围绕中心旋转的星星组 */
-.star-spinner .star-1 {
-  transform-origin: 0 0;
-  animation: starOrbit 3s linear infinite, starTwinkle 1.5s ease-in-out infinite;
-  animation-delay: 0s, 0s;
-}
-
-.star-spinner .star-2 {
-  transform-origin: 0 0;
-  animation: starOrbit 3s linear infinite, starTwinkle 1.5s ease-in-out infinite;
-  animation-delay: 0s, 0.3s;
-}
-
-.star-spinner .star-3 {
-  transform-origin: 0 0;
-  animation: starOrbit 3s linear infinite, starTwinkle 1.5s ease-in-out infinite;
-  animation-delay: 0s, 0.6s;
-}
-
-.star-spinner .star-4 {
-  transform-origin: 0 0;
-  animation: starOrbit 3s linear infinite, starTwinkle 1.5s ease-in-out infinite;
-  animation-delay: 0s, 0.9s;
-}
-
-.star-spinner .star-path {
-  transform-origin: center;
-}
-
-/* 围绕中心旋转的轨道动画 */
 @keyframes starOrbit {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-/* 闪烁动画 */
 @keyframes starTwinkle {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
-/* 步骤信息样式 */
+// ============================================
+// 步骤进度
+// ============================================
 .step-progress-text {
-  color: #b1adf3;
+  color: $primary-light;
+  font-family: $font-family-base;
   font-size: 14px;
   font-weight: 500;
-  white-space: nowrap; /* 防止换行，确保在同一行显示 */
   white-space: nowrap;
   line-height: 24px;
+  letter-spacing: -0.01em;
 }
 
-/* 步骤信息替换动画 */
 .step-fade-enter-active,
 .step-fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
 .step-fade-enter-from {
   opacity: 0;
-  transform: translateX(-10px);
+  transform: translateX(-8px);
 }
 
 .step-fade-leave-to {
   opacity: 0;
-  transform: translateX(10px);
+  transform: translateX(8px);
 }
 
 .step-fade-enter-to,
