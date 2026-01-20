@@ -184,24 +184,100 @@ class DatabaseService:
 
     def _get_table_comment(self, table_name: str) -> str:
         """
-        从 information_schema 中获取指定表的注释。
+        获取指定表的注释，兼容当前支持的多种数据源类型。
+        优先使用 SQLAlchemy Inspector 的统一接口，不同数据库再做兜底处理。
         """
         try:
-            query = text(
-                """
-                SELECT table_comment
-                FROM information_schema.tables
-                WHERE table_schema = DATABASE()
-                  AND table_name = :table_name;
-                """
-            )
+            # 1. 优先使用 SQLAlchemy 的 inspector 接口（支持多数主流数据库）
+            try:
+                inspector = inspect(self._engine)
+                info = inspector.get_table_comment(table_name)
+                if isinstance(info, dict):
+                    comment = info.get("text") or info.get("comment") or ""
+                else:
+                    comment = info or ""
+                if comment:
+                    return str(comment).strip()
+            except Exception as e:
+                logger.debug(f"Inspector 获取表 {table_name} 注释失败，尝试方言级兜底: {e}")
+
+            # 2. 根据方言名称做兜底处理，避免使用单一 MySQL 语法在其它数据库上报错
+            dialect_name = getattr(getattr(self._engine, "dialect", None), "name", "") or ""
+            dialect_name = dialect_name.lower()
+
             with self._engine.connect() as conn:
-                result = conn.execute(query, {"table_name": table_name})
-                row = result.fetchone()
-                return (row[0] or "").strip()
+                # MySQL / MariaDB
+                if dialect_name in ("mysql", "mariadb"):
+                    query = text(
+                        """
+                        SELECT table_comment
+                        FROM information_schema.tables
+                        WHERE table_schema = DATABASE()
+                          AND table_name = :table_name
+                        """
+                    )
+                    row = conn.execute(query, {"table_name": table_name}).fetchone()
+                    return (row[0] or "").strip() if row and row[0] else ""
+
+                # PostgreSQL / Kingbase / Redshift 等 PG 协议
+                if dialect_name in ("postgresql", "postgres"):
+                    query = text(
+                        """
+                        SELECT obj_description(c.oid) AS table_comment
+                        FROM pg_class c
+                        WHERE c.relname = :table_name
+                          AND c.relkind IN ('r','v','m','f','p')
+                        """
+                    )
+                    row = conn.execute(query, {"table_name": table_name}).fetchone()
+                    return (row[0] or "").strip() if row and row[0] else ""
+
+                # SQL Server
+                if dialect_name in ("mssql", "sqlserver"):
+                    query = text(
+                        """
+                        SELECT CAST(ep.value AS NVARCHAR(4000)) AS table_comment
+                        FROM sys.tables t
+                        LEFT JOIN sys.extended_properties ep
+                          ON ep.major_id = t.object_id
+                         AND ep.minor_id = 0
+                         AND ep.name = 'MS_Description'
+                        WHERE t.name = :table_name
+                        """
+                    )
+                    row = conn.execute(query, {"table_name": table_name}).fetchone()
+                    return (row[0] or "").strip() if row and row[0] else ""
+
+                # Oracle
+                if "oracle" in dialect_name:
+                    query = text(
+                        """
+                        SELECT comments
+                        FROM user_tab_comments
+                        WHERE table_name = :table_name
+                        """
+                    )
+                    row = conn.execute(query, {"table_name": table_name.upper()}).fetchone()
+                    return (row[0] or "").strip() if row and row[0] else ""
+
+                # ClickHouse
+                if "clickhouse" in dialect_name:
+                    query = text(
+                        """
+                        SELECT comment
+                        FROM system.tables
+                        WHERE database = currentDatabase()
+                          AND name = :table_name
+                        """
+                    )
+                    row = conn.execute(query, {"table_name": table_name}).fetchone()
+                    return (row[0] or "").strip() if row and row[0] else ""
+
         except Exception as e:
             logger.warning(f"⚠️ 获取表 {table_name} 注释失败: {e}")
-            return ""
+
+        # 兜底：没有注释或不支持，返回空字符串即可（不影响后续流程）
+        return ""
 
     @staticmethod
     def _build_document(table_name: str, table_info: dict) -> str:
@@ -386,14 +462,15 @@ class DatabaseService:
         
         try:
             with db_pool.get_session() as session:
-                # 查询数据源下的所有表
-                tables = session.query(DatasourceTable).filter(
-                    DatasourceTable.ds_id == self._datasource_id,
-                    DatasourceTable.table_name.in_(list(table_info.keys()))
-                ).all()
+                # 查询数据源下的所有表（不再按表名过滤，避免大小写不一致导致漏查）
+                tables = (
+                    session.query(DatasourceTable)
+                    .filter(DatasourceTable.ds_id == self._datasource_id)
+                    .all()
+                )
                 
-                # 构建表名到表的映射
-                table_map = {table.table_name: table for table in tables}
+                # 构建表名到表的映射（不区分大小写，兼容 Oracle 等会返回大写表名的数据库）
+                table_map = {str(table.table_name).upper(): table for table in tables}
                 
                 # 收集有预计算 embedding 的表
                 precomputed_embeddings = []
@@ -401,7 +478,8 @@ class DatabaseService:
                 missing_table_names = []
                 
                 for table_name, info in table_info.items():
-                    table = table_map.get(table_name)
+                    # 统一按大写匹配，避免 T_ALARM_INFO / t_alarm_info 不一致导致无法命中
+                    table = table_map.get(str(table_name).upper())
                     # 检查是否有 embedding 字段（通过 hasattr 检查，避免字段不存在时报错）
                     if table and hasattr(table, 'embedding') and table.embedding:
                         try:

@@ -672,9 +672,22 @@ class DatasourceService:
         if not selected_fields:
             selected_fields = ["*"]
 
-        # 构建 SQL
+        # 构建 SQL（按不同数据库类型使用兼容的限制语法）
         fields_str = ", ".join(selected_fields) if selected_fields != ["*"] else "*"
-        sql = f"SELECT {fields_str} FROM {table_identifier} LIMIT 100"
+
+        ds_type = datasource.type
+        if ds_type in ["mysql", "pg", "ck", "doris", "starrocks", "redshift", "kingbase"]:
+            # MySQL / PostgreSQL / ClickHouse / Doris / StarRocks / Redshift / Kingbase 等支持 LIMIT 语法
+            sql = f"SELECT {fields_str} FROM {table_identifier} LIMIT 100"
+        elif ds_type in ["oracle", "dm"]:
+            # Oracle / 达梦：使用 ROWNUM 语法
+            sql = f"SELECT {fields_str} FROM {table_identifier} WHERE ROWNUM <= 100"
+        elif ds_type == "sqlServer":
+            # SQL Server：使用 TOP 语法
+            sql = f"SELECT TOP 100 {fields_str} FROM {table_identifier}"
+        else:
+            # 兜底：仍然使用 LIMIT，部分方言会自动兼容；如不兼容会在日志中体现
+            sql = f"SELECT {fields_str} FROM {table_identifier} LIMIT 100"
 
         try:
             # 执行查询

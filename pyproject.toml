@@ -71,6 +71,8 @@ dependencies = [
     "pgvector>=0.4.2",
     "langchain-huggingface>=1.2.0",
     "sentence-transformers>=5.2.0",
+    "elasticsearch==8.17.1",
+    "redshift-connector==2.1.4",
 ]
 
 [[tool.uv.index]]

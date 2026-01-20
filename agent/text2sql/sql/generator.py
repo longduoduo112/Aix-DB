@@ -53,11 +53,17 @@ def sql_generate(state: AgentState) -> AgentState:
                     ds = DatasourceService.get_datasource_by_id(session, datasource_id)
                     if ds:
                         db_type = ds.type
-                        # 尝试从配置中获取数据库名
+                        # 尝试从配置中获取数据库名 / Schema
                         try:
                             from common.datasource_util import DatasourceConfigUtil
                             config = DatasourceConfigUtil.decrypt_config(ds.configuration)
-                            db_name = config.get("database", config.get("dbSchema", "database"))
+                            database = config.get("database")
+                            db_schema = config.get("dbSchema")
+                            # 对于需要 Schema 的数据库（如 PostgreSQL），优先使用 dbSchema
+                            if db_type in ["pg", "oracle", "sqlServer", "kingbase", "redshift", "dm"] and db_schema:
+                                db_name = db_schema
+                            else:
+                                db_name = database or db_schema or "database"
                         except Exception:
                             pass
             except Exception as e:

@@ -30,10 +30,16 @@ const datasourceTypes = [
   { label: 'Oracle', value: 'oracle' },
   { label: 'SQL Server', value: 'sqlServer' },
   { label: 'ClickHouse', value: 'ck' },
+  { label: '达梦', value: 'dm' },
+  { label: 'Apache Doris', value: 'doris' },
+  { label: 'AWS Redshift', value: 'redshift' },
+  { label: 'Elasticsearch', value: 'es' },
+  { label: 'Kingbase', value: 'kingbase' },
+  { label: 'StarRocks', value: 'starrocks' },
 ]
 
 // 需要 Schema 的数据源类型
-const needSchemaTypes = ['sqlServer', 'pg', 'oracle']
+const needSchemaTypes = ['sqlServer', 'pg', 'oracle', 'dm', 'redshift', 'kingbase']
 
 // 表单引用
 const formRef = ref<FormInst | null>(null)
@@ -125,6 +131,12 @@ watch(() => formData.type, (newType) => {
     oracle: 1521,
     sqlServer: 1433,
     ck: 8123,
+    dm: 5236,
+    doris: 9030,
+    redshift: 5439,
+    es: 9200,
+    kingbase: 54321,
+    starrocks: 9030,
   }
   if (defaultPorts[newType]) {
     formData.port = defaultPorts[newType]

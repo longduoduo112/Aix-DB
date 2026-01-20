@@ -17,7 +17,7 @@ from agent.text2sql.permission.permission_retriever import (
 )
 from agent.text2sql.template.prompt_builder import PromptBuilder
 from agent.text2sql.template.schema_formatter import get_database_engine_info
-from agent.text2sql.analysis.data_render_antv import extract_table_names_sqlglot, extract_table_alias_mapping
+from agent.text2sql.analysis.data_render_antv import extract_table_names_sqlglot, extract_table_alias_mapping, DB_TYPE_TO_DIALECT
 from common.llm_util import get_llm
 from services.datasource_service import DatasourceService
 from model.db_connection_pool import get_db_pool
@@ -43,7 +43,8 @@ def _apply_column_permissions_to_sql(
     if not table_allowed_fields:
         return sql
 
-    dialect = "mysql" if not db_type else db_type.lower()
+    # 使用数据库类型到 sqlglot 方言的映射，确保所有数据源类型都能正确解析
+    dialect = DB_TYPE_TO_DIALECT.get(db_type.lower() if db_type else "mysql", "mysql")
     try:
         expressions = parse(sql, read=dialect)
     except Exception as e:
@@ -107,6 +108,7 @@ def _apply_column_permissions_to_sql(
         return sql
 
     try:
+        # 使用相同的方言映射进行序列化
         return "; ".join([e.sql(dialect=dialect) for e in expressions if e])
     except Exception:
         # 序列化失败，回退原 SQL

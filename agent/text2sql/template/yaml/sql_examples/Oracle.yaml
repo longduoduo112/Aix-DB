@@ -17,9 +17,10 @@ template:
     <rule>
       必须对数据库名、表名、字段名、别名外层加双引号（"）。
       <note>
-        1. 点号（.）不能包含在引号内，必须写成 "schema"."table"
-        2. 即使标识符不含特殊字符或非关键字，也需强制加双引号
-        3. Oracle 对象名默认大写，如需小写必须加双引号
+        1. 点号（.）不能包含在引号内，必须写成 "SCHEMA"."TABLE"
+        2. 所有对象名（SCHEMA、TABLE、COLUMN）在 SQL 中一律使用**大写形式**，例如 "TESTUSER"."T_ORDER_DETAILS"
+        3. Oracle 对象名默认会被折叠为大写；如果在 SQL 中使用小写或混合大小写（如 "t_order_details"），则必须与实际建表时的大小写**完全一致**，否则会报 ORA-00942
+        4. 为了避免大小写不一致导致的 ORA-00942，本题中请始终使用大写对象名并加双引号，例如："TESTUSER"."T_ALARM_INFO"
       </note>
     </rule>
 
@@ -191,14 +192,14 @@ template:
 
   example_engine: Oracle 11g
   example_answer_1: |
-    {"success":true,"sql":"SELECT \"country\" AS \"country_name\", \"continent\" AS \"continent_name\", \"year\" AS \"year\", \"gdp\" AS \"gdp\" FROM \"Sample_Database\".\"sample_country_gdp\" ORDER BY \"country\", \"year\"","tables":["sample_country_gdp"],"chart-type":"line"}
+    {"success":true,"sql":"SELECT \"COUNTRY\" AS \"country_name\", \"CONTINENT\" AS \"continent_name\", \"YEAR\" AS \"year\", \"GDP\" AS \"gdp\" FROM \"SAMPLE_DATABASE\".\"SAMPLE_COUNTRY_GDP\" ORDER BY \"COUNTRY\", \"YEAR\"","tables":["SAMPLE_COUNTRY_GDP"],"chart-type":"line"}
   example_answer_1_with_limit: |
-    {"success":true,"sql":"SELECT \"country\" AS \"country_name\", \"continent\" AS \"continent_name\", \"year\" AS \"year\", \"gdp\" AS \"gdp\" FROM \"Sample_Database\".\"sample_country_gdp\" WHERE ROWNUM <= 1000 ORDER BY \"country\", \"year\"","tables":["sample_country_gdp"],"chart-type":"line"}
+    {"success":true,"sql":"SELECT \"COUNTRY\" AS \"country_name\", \"CONTINENT\" AS \"continent_name\", \"YEAR\" AS \"year\", \"GDP\" AS \"gdp\" FROM \"SAMPLE_DATABASE\".\"SAMPLE_COUNTRY_GDP\" WHERE ROWNUM <= 1000 ORDER BY \"COUNTRY\", \"YEAR\"","tables":["SAMPLE_COUNTRY_GDP"],"chart-type":"line"}
   example_answer_2: |
-    {"success":true,"sql":"SELECT \"country\" AS \"country_name\", \"gdp\" AS \"gdp\" FROM \"Sample_Database\".\"sample_country_gdp\" WHERE \"year\" = '2024' ORDER BY \"gdp\" DESC","tables":["sample_country_gdp"],"chart-type":"pie"}
+    {"success":true,"sql":"SELECT \"COUNTRY\" AS \"country_name\", \"GDP\" AS \"gdp\" FROM \"SAMPLE_DATABASE\".\"SAMPLE_COUNTRY_GDP\" WHERE \"YEAR\" = '2024' ORDER BY \"GDP\" DESC","tables":["SAMPLE_COUNTRY_GDP"],"chart-type":"pie"}
   example_answer_2_with_limit: |
-    {"success":true,"sql":"SELECT \"country\" AS \"country_name\", \"gdp\" AS \"gdp\" FROM \"Sample_Database\".\"sample_country_gdp\" WHERE \"year\" = '2024' AND ROWNUM <= 1000 ORDER BY \"gdp\" DESC","tables":["sample_country_gdp"],"chart-type":"pie"}
+    {"success":true,"sql":"SELECT \"COUNTRY\" AS \"country_name\", \"GDP\" AS \"gdp\" FROM \"SAMPLE_DATABASE\".\"SAMPLE_COUNTRY_GDP\" WHERE \"YEAR\" = '2024' AND ROWNUM <= 1000 ORDER BY \"GDP\" DESC","tables":["SAMPLE_COUNTRY_GDP"],"chart-type":"pie"}
   example_answer_3: |
-    {"success":true,"sql":"SELECT \"country\" AS \"country_name\", \"gdp\" AS \"gdp\" FROM \"Sample_Database\".\"sample_country_gdp\" WHERE \"year\" = '2025' AND \"country\" = '中国'","tables":["sample_country_gdp"],"chart-type":"table"}
+    {"success":true,"sql":"SELECT \"COUNTRY\" AS \"country_name\", \"GDP\" AS \"gdp\" FROM \"SAMPLE_DATABASE\".\"SAMPLE_COUNTRY_GDP\" WHERE \"YEAR\" = '2025' AND \"COUNTRY\" = '中国'","tables":["SAMPLE_COUNTRY_GDP"],"chart-type":"table"}
   example_answer_3_with_limit: |
-    {"success":true,"sql":"SELECT \"country\" AS \"country_name\", \"gdp\" AS \"gdp\" FROM \"Sample_Database\".\"sample_country_gdp\" WHERE \"year\" = '2025' AND \"country\" = '中国' AND ROWNUM <= 1000","tables":["sample_country_gdp"],"chart-type":"table"}
+    {"success":true,"sql":"SELECT \"COUNTRY\" AS \"country_name\", \"GDP\" AS \"gdp\" FROM \"SAMPLE_DATABASE\".\"SAMPLE_COUNTRY_GDP\" WHERE \"YEAR\" = '2025' AND \"COUNTRY\" = '中国' AND ROWNUM <= 1000","tables":["SAMPLE_COUNTRY_GDP"],"chart-type":"table"}

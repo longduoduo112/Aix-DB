@@ -8,6 +8,9 @@ from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# 需要 Schema 的数据库类型（与 datasource_util.py 中的定义保持一致）
+NEED_SCHEMA_TYPES = ['sqlServer', 'pg', 'oracle', 'dm', 'redshift', 'kingbase']
+
 
 def format_schema_to_m_schema(
     db_info: Dict[str, Dict[str, Any]],
@@ -31,7 +34,7 @@ def format_schema_to_m_schema(
                     "foreign_keys": ["column -> table.column"]
                 }
             }
-        db_name: 数据库名称（默认：database）
+        db_name: 数据库名称或Schema名称（默认：database）
         db_type: 数据库类型（默认：mysql）
     
     Returns:
@@ -43,13 +46,19 @@ def format_schema_to_m_schema(
     schema_str = f"【DB_ID】 {db_name}\n【Schema】\n"
     
     for table_name, table_info in db_info.items():
-        # 构建表定义行
-        if db_type in ["mysql", "es"]:
-            # MySQL 和 Elasticsearch 不使用 schema 前缀
-            schema_table = f"# Table: {table_name}"
+        # Oracle: 统一在提示词中使用“全大写对象名”，避免 LLM 生成 "t_products" 这种与实际表名大小写不一致的写法
+        if db_type.lower() == "oracle":
+            display_table_name = table_name.upper()
         else:
-            # 其他数据库使用 schema.table 格式
-            schema_table = f"# Table: {db_name}.{table_name}"
+            display_table_name = table_name
+        # 构建表定义行
+        # 根据数据库类型判断是否需要使用 schema.table 格式
+        if db_type.lower() in NEED_SCHEMA_TYPES:
+            # 需要 Schema 的数据库使用 schema.table 格式
+            schema_table = f"# Table: {db_name}.{display_table_name}"
+        else:
+            # MySQL、ClickHouse、Doris、StarRocks、Elasticsearch 等不使用 schema 前缀
+            schema_table = f"# Table: {display_table_name}"
         
         # 添加表注释
         table_comment = table_info.get("table_comment", "").strip()
@@ -63,13 +72,15 @@ def format_schema_to_m_schema(
         if columns:
             field_list = []
             for column_name, column_info in columns.items():
+                # Oracle 中实际列名默认大写，这里在提示词中也统一展示为大写，便于 LLM 生成正确的带引号标识符
+                display_column_name = column_name.upper() if db_type.lower() == "oracle" else column_name
                 column_type = column_info.get("type", "VARCHAR")
                 column_comment = column_info.get("comment", "").strip()
-                
+
                 if column_comment:
-                    field_list.append(f"({column_name}:{column_type}, {column_comment})")
+                    field_list.append(f"({display_column_name}:{column_type}, {column_comment})")
                 else:
-                    field_list.append(f"({column_name}:{column_type})")
+                    field_list.append(f"({display_column_name}:{column_type})")
             
             schema_table += ",\n".join(field_list)
         

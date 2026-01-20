@@ -19,6 +19,26 @@ Apache EChart数据渲染节点来支撑表格的渲染
 
 logger = logging.getLogger(__name__)
 
+# 数据库类型到 sqlglot 方言的映射（与 data_render_antv.py 保持一致）
+DB_TYPE_TO_DIALECT = {
+    "mysql": "mysql",
+    "postgresql": "postgres",
+    "pg": "postgres",
+    "oracle": "oracle",
+    "sqlserver": "tsql",
+    "mssql": "tsql",
+    "clickhouse": "clickhouse",
+    "ck": "clickhouse",
+    "redshift": "redshift",
+    "elasticsearch": "mysql",
+    "es": "mysql",
+    "starrocks": "mysql",
+    "doris": "mysql",
+    "dm": "oracle",
+    "kingbase": "postgres",
+    "excel": "postgres",
+}
+
 
 def data_render_apache(state: AgentState) -> dict:
     """
@@ -34,8 +54,26 @@ def data_render_apache(state: AgentState) -> dict:
     # 构建基础表格数据结构
     table_data = {"llm": {"type": "response_table"}, "data": {"column": [], "result": []}}
 
+    # 获取数据源类型（从state中获取，如果没有则默认为mysql）
+    db_type = state.get("db_type", "mysql")
+    if not db_type:
+        # 尝试从datasource_id获取
+        datasource_id = state.get("datasource_id")
+        if datasource_id:
+            try:
+                from model.db_connection_pool import get_db_pool
+                from services.datasource_service import DatasourceService
+                db_pool = get_db_pool()
+                with db_pool.get_session() as session:
+                    ds = DatasourceService.get_datasource_by_id(session, datasource_id)
+                    if ds:
+                        db_type = ds.type or "mysql"
+            except Exception:
+                pass
+        db_type = db_type or "mysql"
+    
     # 获取生成的SQL中的表名
-    generated_table_names = extract_table_names_sqlglot(generated_sql)
+    generated_table_names = extract_table_names_sqlglot(generated_sql, db_type)
     if not generated_table_names:
         logger.info("未从SQL中提取到表名")
         return table_data
@@ -86,15 +124,18 @@ def convert_value(v):
         return v
 
 
-def extract_table_names_sqlglot(sql: str) -> list:
+def extract_table_names_sqlglot(sql: str, db_type: str = "mysql") -> list:
     """
     使用 sqlglot 提取 SQL 中的所有表名（支持复杂语法、多表、子查询、CTE 等）
 
     :param sql: SQL 语句
+    :param db_type: 数据库类型，用于选择正确的方言解析
     :return: 表名列表（去重）
     """
     try:
-        expression = parse(sql)[0]
+        # 将数据库类型映射到 sqlglot 方言
+        dialect = DB_TYPE_TO_DIALECT.get(db_type.lower() if db_type else "mysql", "mysql")
+        expression = parse(sql, read=dialect)[0]
         tables = set()
         for table in expression.find_all(sqlglot.exp.Table):
             # 取表名（去掉 schema）
