@@ -2,7 +2,7 @@ import warnings
 
 from sqlalchemy import create_engine
 
-from common.datasource_util import DatasourceConfigUtil, DatasourceConnectionUtil
+from common.datasource_util import DatasourceConfigUtil, DatasourceConnectionUtil, DB, ConnectType
 from model import Datasource
 
 warnings.filterwarnings("ignore", message=".*pkg_resources.*deprecated.*")
@@ -122,10 +122,16 @@ class DatabaseService:
                     ds = session.query(Datasource).filter(Datasource.id == datasource_id).first()
                     if ds:
                         self._datasource = ds
-                        config = DatasourceConfigUtil.decrypt_config(ds.configuration)
-                        uri = DatasourceConnectionUtil.build_connection_uri(ds.type, config)
-                        self._engine = create_engine(uri)
-                        logger.info(f"Initialized DatabaseService with datasource_id: {datasource_id}")
+                        # 检查数据源是否支持 SQLAlchemy 连接
+                        db_enum = DB.get_db(ds.type, default_if_none=True)
+                        if db_enum.connect_type == ConnectType.sqlalchemy:
+                            config = DatasourceConfigUtil.decrypt_config(ds.configuration)
+                            uri = DatasourceConnectionUtil.build_connection_uri(ds.type, config)
+                            self._engine = create_engine(uri)
+                            logger.info(f"Initialized DatabaseService with datasource_id: {datasource_id}")
+                        else:
+                            # 对于使用原生驱动的数据库（如 Doris），不创建 SQLAlchemy engine
+                            logger.info(f"Datasource {datasource_id} ({ds.type}) uses native driver, skipping SQLAlchemy engine")
             except Exception as e:
                 logger.error(f"Failed to initialize datasource {datasource_id}: {e}")
 
@@ -188,6 +194,12 @@ class DatabaseService:
         优先使用 SQLAlchemy Inspector 的统一接口，不同数据库再做兜底处理。
         """
         try:
+            # 0. 对于原生驱动的数据库，直接从元数据表获取注释
+            if self._datasource and self._datasource_id:
+                db_enum = DB.get_db(self._datasource.type, default_if_none=True)
+                if db_enum.connect_type == ConnectType.py_driver:
+                    return self._get_table_comment_from_metadata(table_name)
+
             # 1. 优先使用 SQLAlchemy 的 inspector 接口（支持多数主流数据库）
             try:
                 inspector = inspect(self._engine)
@@ -296,16 +308,16 @@ class DatabaseService:
     def _fetch_all_table_info(self, user_id: Optional[int] = None, use_cache: bool = True) -> Dict[str, Dict]:
         """
         获取数据库中所有表的结构信息（带权限过滤和缓存）。
-        
+
         Args:
             user_id: 用户ID，用于权限过滤（管理员不应用权限过滤）
             use_cache: 是否使用缓存
-            
+
         Returns:
             表信息字典
         """
         from common.permission_util import is_admin
-        
+
         # 检查缓存
         cache_key = (self._datasource_id or 0, user_id)
         if use_cache:
@@ -315,8 +327,19 @@ class DatabaseService:
                     if time.time() - cached_time < CACHE_TTL:
                         logger.debug(f"✅ 使用缓存的表结构信息 (datasource_id={self._datasource_id}, user_id={user_id})")
                         return cached_data
-        
+
         start_time = time.time()
+
+        # 检查数据源是否使用原生驱动（非 SQLAlchemy）
+        use_native_driver = False
+        if self._datasource and self._datasource_id:
+            db_enum = DB.get_db(self._datasource.type, default_if_none=True)
+            use_native_driver = db_enum.connect_type == ConnectType.py_driver
+
+        if use_native_driver and self._datasource_id:
+            # 对于原生驱动的数据库（如 Doris、StarRocks 等），从 t_datasource_table 获取表结构
+            return self._fetch_table_info_from_metadata(user_id, use_cache, start_time)
+
         inspector = inspect(self._engine)
         table_names = inspector.get_table_names()
         logger.info(f"🔍 开始加载 {len(table_names)} 张表的 schema 信息...")
@@ -448,6 +471,82 @@ class DatabaseService:
         
         return table_info
 
+    def _fetch_table_info_from_metadata(self, user_id: Optional[int], use_cache: bool, start_time: float) -> Dict[str, Dict]:
+        """
+        从 t_datasource_table 和 t_datasource_field 获取表结构信息。
+        用于原生驱动的数据库（如 Doris、StarRocks 等），这些数据库不能通过 SQLAlchemy inspect 获取表结构。
+
+        Args:
+            user_id: 用户ID，用于权限过滤
+            use_cache: 是否使用缓存
+            start_time: 开始时间，用于计算耗时
+
+        Returns:
+            表信息字典
+        """
+        from common.permission_util import is_admin
+
+        cache_key = (self._datasource_id or 0, user_id)
+        table_info = {}
+
+        try:
+            with db_pool.get_session() as session:
+                # 获取该数据源下所有已勾选的表
+                tables = session.query(DatasourceTable).filter(
+                    DatasourceTable.ds_id == self._datasource_id,
+                    DatasourceTable.checked == True
+                ).all()
+
+                logger.info(f"🔍 从元数据加载 {len(tables)} 张表的 schema 信息（原生驱动模式）...")
+
+                # 获取所有表的字段
+                table_ids = [t.id for t in tables]
+                fields = session.query(DatasourceField).filter(
+                    DatasourceField.ds_id == self._datasource_id,
+                    DatasourceField.table_id.in_(table_ids),
+                    DatasourceField.checked == True
+                ).all()
+
+                # 按表ID分组字段
+                fields_by_table = {}
+                for field in fields:
+                    if field.table_id not in fields_by_table:
+                        fields_by_table[field.table_id] = []
+                    fields_by_table[field.table_id].append(field)
+
+                # 构建表信息
+                for table in tables:
+                    table_fields = fields_by_table.get(table.id, [])
+                    if not table_fields:
+                        logger.debug(f"⚠️ 表 {table.table_name} 无可用字段，跳过")
+                        continue
+
+                    columns = {}
+                    for field in table_fields:
+                        columns[field.field_name] = {
+                            "type": field.field_type or "",
+                            "comment": field.custom_comment or field.field_comment or "",
+                        }
+
+                    table_info[table.table_name] = {
+                        "columns": columns,
+                        "foreign_keys": [],  # 原生驱动暂不支持外键信息
+                        "table_comment": table.custom_comment or table.table_comment or "",
+                    }
+
+        except Exception as e:
+            logger.error(f"❌ 从元数据获取表结构失败: {e}", exc_info=True)
+            return {}
+
+        elapsed = time.time() - start_time
+        logger.info(f"✅ 成功加载 {len(table_info)} 张表（原生驱动模式），耗时 {elapsed:.2f}s")
+
+        # 更新缓存
+        if use_cache:
+            with _cache_lock:
+                _table_info_cache[cache_key] = (table_info, time.time())
+
+        return table_info
 
     def _get_precomputed_embeddings(self, table_info: Dict[str, Dict]) -> Tuple[Optional[np.ndarray], List[str], List[str]]:
         """

@@ -144,11 +144,37 @@ const handleBack = () => {
   router.push({ name: 'ChatIndex' })
 }
 
-// 获取图标 (这里假设只有 mysql 图标，实际应根据 type 返回不同图标)
+// 获取图标
 const getIcon = (type: string) => {
-  // 可以根据 type 返回不同的图片路径
-  // 目前代码中只看到了 mysql-icon.svg
-  return new URL('@/assets/svg/mysql-icon.svg', import.meta.url).href
+  // 使用 Vite 的 glob import 来导入所有图标
+  const iconModules = import.meta.glob('@/assets/datasource/*', { eager: true, as: 'url' })
+
+  const iconMap: Record<string, string> = {
+    mysql: 'icon_mysql.svg',
+    pg: 'icon_pg.svg',
+    oracle: 'icon_oracle.svg',
+    sqlServer: 'icon_sqlserver.svg',
+    ck: 'icon_ck.svg',
+    dm: 'icon_dm.png',
+    doris: 'icon_doris.png',
+    redshift: 'icon_redshift.png',
+    es: 'icon_es.png',
+    kingbase: 'icon_kingbase.png',
+    starrocks: 'icon_starrocks.png',
+  }
+
+  const iconName = iconMap[type] || 'icon_mysql.svg'
+  const iconPath = `/src/assets/datasource/${iconName}`
+
+  // 从 glob import 结果中查找匹配的图标
+  for (const path in iconModules) {
+    if (path.includes(iconName)) {
+      return iconModules[path] as string
+    }
+  }
+
+  // 如果找不到，返回默认图标
+  return iconModules['/src/assets/datasource/icon_mysql.svg'] as string || ''
 }
 
 onMounted(() => {

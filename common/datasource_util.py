@@ -18,9 +18,11 @@ from elasticsearch import Elasticsearch
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.exc import SQLAlchemyError
 
-# 达梦数据库驱动仅在非 macOS 系统上导入
-if platform.system() != "Darwin":
+# 达梦数据库驱动（可选依赖）
+try:
     import dmPython
+except ImportError:
+    dmPython = None
 
 # AWS Redshift 驱动
 try:
@@ -198,8 +200,8 @@ class DatasourceConnectionUtil:
 
                 if ds_type == "dm":
                     # 达梦数据库
-                    if platform.system() == "Darwin":
-                        return False, "macOS 系统不支持达梦数据库驱动"
+                    if dmPython is None:
+                        return False, "未安装达梦数据库驱动 dmPython"
                     with dmPython.connect(user=username, password=password, server=host,
                                           port=port, **extra_config) as conn:
                         with conn.cursor() as cursor:
@@ -398,8 +400,8 @@ class DatasourceConnectionUtil:
                 database = config.get("database", "")
 
                 if ds_type == "dm":
-                    if platform.system() == "Darwin":
-                        raise Exception("macOS 系统不支持达梦数据库驱动")
+                    if dmPython is None:
+                        raise Exception("未安装达梦数据库驱动 dmPython")
                     with dmPython.connect(user=username, password=password, server=host,
                                           port=port, **extra_config) as conn:
                         with conn.cursor() as cursor:
@@ -660,8 +662,8 @@ class DatasourceConnectionUtil:
                 database = config.get("database", "")
 
                 if ds_type == "dm":
-                    if platform.system() == "Darwin":
-                        raise Exception("macOS 系统不支持达梦数据库驱动")
+                    if dmPython is None:
+                        raise Exception("未安装达梦数据库驱动 dmPython")
                     with dmPython.connect(user=username, password=password, server=host,
                                           port=port, **extra_config) as conn:
                         with conn.cursor() as cursor:
@@ -799,8 +801,8 @@ class DatasourceConnectionUtil:
                 database = config.get("database", "")
 
                 if ds_type == "dm":
-                    if platform.system() == "Darwin":
-                        raise Exception("macOS 系统不支持达梦数据库驱动")
+                    if dmPython is None:
+                        raise Exception("未安装达梦数据库驱动 dmPython")
                     with dmPython.connect(user=username, password=password, server=host,
                                           port=port, **extra_config) as conn:
                         with conn.cursor() as cursor:

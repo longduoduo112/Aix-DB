@@ -2307,7 +2307,7 @@ $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 // ============================================
 .qianwen-sidebar {
   background-color: $bg-sidebar;
-  border-right: 1px solid $border-color;
+  // border-right: 0.1px solid rgba(0, 0, 0, 0.06) !important;
   font-family: $font-family-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -2509,9 +2509,9 @@ $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 24px;
+  padding: 10px 24px;
   background-color: #fff;
-  border-bottom: 1px solid rgba($border-color, 0.5);
+  // border-bottom: 1px solid rgba($border-color, 0.5);
 }
 
 .model-info {
