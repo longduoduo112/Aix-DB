@@ -39,7 +39,6 @@ Aix-DB 基于 **LangChain/LangGraph** 框架，结合 **MCP Skills** 多智能�
   </video>
 </p>
 
----
 
 ## 系统架构
 
@@ -54,7 +53,6 @@ Aix-DB 基于 **LangChain/LangGraph** 框架，结合 **MCP Skills** 多智能�
 - **智能服务层**：LLM 服务、Text2SQL Agent、RAG 检索引擎、MCP 多智能体协作
 - **数据存储层**：支持多种数据库类型，包括关系型数据库、向量数据库、图数据库和文件存储
 
----
 
 ## 支持的数据源
 
@@ -91,7 +89,6 @@ Aix-DB 基于 **LangChain/LangGraph** 框架，结合 **MCP Skills** 多智能�
 | 6 | **可视化展示** | 自动生成 ECharts/AntV 图表，直观呈现分析结果 |
 
 
----
 
 ## 快速开始
 
@@ -162,7 +159,6 @@ npm install
 npm run dev
 ```
 
----
 
 ## 技术栈
 
@@ -172,14 +168,13 @@ npm run dev
 
 **AI 模型**：OpenAI · Anthropic · DeepSeek · Qwen · Ollama
 
----
+
 
 ## 文档
 - [配置说明](./docs/docs/index.md)
 - [API 文档](http://localhost:8088/docs) (启动后访问)
 
 
----
 
 ## 贡献指南
 
@@ -191,7 +186,6 @@ npm run dev
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 提交 Pull Request
 
----
 
 ## 联系我们
 
@@ -218,13 +212,13 @@ npm run dev
 - 亲自远程帮您 **配置环境并部署**
 - 提供 **项目资料及二开思路**
 
----
+
 
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=apconw/Aix-DB&type=Date)](https://star-history.com/#apconw/Aix-DB&Date)
 
----
+
 
 ## 开源许可
 
