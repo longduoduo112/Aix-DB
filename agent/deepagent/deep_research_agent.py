@@ -362,8 +362,10 @@ class DeepAgent:
 
         printed_count = 0
         async for chunk in agent.astream(**stream_args):
-            # 检查是否已取消
-            if self.running_tasks[task_id]["cancelled"]:
+            # 检查是否已取消（安全访问，避免 KeyError）
+            if task_id in self.running_tasks and self.running_tasks[task_id].get(
+                "cancelled", False
+            ):
                 await response.write(
                     self._create_response(
                         "\n> ⚠️ 任务已被用户取消", "info", DataTypeEnum.ANSWER.value[0]
@@ -388,8 +390,10 @@ class DeepAgent:
                         await response.flush()
                     await asyncio.sleep(0)
 
-        # 保存记录
-        if not self.running_tasks[task_id]["cancelled"]:
+        # 保存记录（安全访问，避免 KeyError）
+        if task_id in self.running_tasks and not self.running_tasks[task_id].get(
+            "cancelled", False
+        ):
             await add_user_record(
                 uuid_str,
                 session_id,

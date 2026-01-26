@@ -123,6 +123,9 @@ function newChat() {
   contentLoadingStates.value = []
   currentRenderIndex.value = 0
 
+  // 清除所有步骤信息
+  stepProgressStates.value = {}
+
   // 重置对话类型为默认值（智能问答）
   qa_type.value = 'COMMON_QA'
   businessStore.update_qa_type('COMMON_QA')
@@ -148,7 +151,7 @@ function newChat() {
  * 默认大模型显示名称（从 t_ai_model 动态查询，用于页面显示）
  * 约定：model_type = 1 表示大语言模型，default_model = true 表示默认模型
  */
-const defaultLLMTypeName = ref('Qwen3-Max')
+const defaultLLMTypeName = ref('')
 
 /**
  * 数据流转换模型类型（用于 MarkdownPreview 组件的数据流处理）
@@ -268,6 +271,10 @@ const onCompletedReader = (index: number) => {
     stylizingLoading.value = false
     // 取消推荐问题按钮和重新对话按钮的禁用状态
     businessStore.set_suggested_disabled(false)
+    // 清除步骤信息：对话完成后清除该对话的步骤进度信息
+    if (stepProgressStates.value[index] !== undefined) {
+      delete stepProgressStates.value[index]
+    }
     // 隐藏加载动画（找到对应的 visibleIndex）
     const item = conversationItems.value[index]
     const visibleIndex = visibleConversationItems.value.findIndex(vi => vi.uuid === item.uuid)
@@ -481,6 +488,14 @@ const onStepProgress = (visibleIndex: number, progress: any) => {
   }
 
   if (progress && progress.type === 'step_progress' && progress.stepName && progress.progressId) {
+    // 过滤掉"统一收集（结果总结→图表数据→推荐问题）"步骤，不显示
+    if (progress.stepName && progress.stepName.includes('统一收集（结果总结→图表数据→推荐问题）')) {
+      return
+    }
+    // 过滤掉"并行处理（图表配置与结果总结）..."步骤，不显示
+    if (progress.stepName && progress.stepName.includes('并行处理（图表配置与结果总结）')) {
+      return
+    }
     // 只有当状态为 start 时才显示/替换步骤信息
     // complete 状态不做任何操作，等待下一个步骤的 start 来替换
     if (progress.status === 'start') {
@@ -653,6 +668,9 @@ const handleCreateStylized = async (
     // 新建对话 时输入新问题 清空历史数据
     conversationItems.value = []
     showDefaultPage.value = false
+
+    // 清除所有步骤信息
+    stepProgressStates.value = {}
 
     // 清空文件上传列表
     pendingUploadFileInfoList.value = []
@@ -1023,6 +1041,8 @@ const onAqtiveChange = (val, chat_id) => {
   qa_type.value = val
   businessStore.update_qa_type(val)
 
+  // 切换问答类型时清除所有步骤信息
+  stepProgressStates.value = {}
 
   // 新增：切换类型时生成新uuid
   if (chat_id) {
