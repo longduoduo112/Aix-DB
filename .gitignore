@@ -30,6 +30,7 @@ docker/.env
 *.log
 .env.local
 .vscode/
+!.vscode/extensions.json
 .cursor/
 
 # claude code 配置信息
