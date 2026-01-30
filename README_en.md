@@ -116,6 +116,10 @@ docker run -d \
   -e SERVER_HOST=0.0.0.0 \
   -e SERVER_PORT=8088 \
   -e SERVER_WORKERS=2 \
+  -e LANGFUSE_TRACING_ENABLED=false \
+  -e LANGFUSE_SECRET_KEY= \
+  -e LANGFUSE_PUBLIC_KEY= \
+  -e LANGFUSE_BASE_URL= \
   -p 18080:80 \
   -p 18088:8088 \
   -p 15432:5432 \
@@ -131,6 +135,8 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/aix-db:1.2.2
 ```
+
+> **Note**: To enable Langfuse full-chain tracing, set `LANGFUSE_TRACING_ENABLED=true` and configure the corresponding keys and URL.
 
 ### Deploy with Docker Compose
 

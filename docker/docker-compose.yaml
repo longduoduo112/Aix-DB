@@ -12,6 +12,12 @@ services:
       SERVER_PORT: ${SERVER_PORT:-8088}
       SERVER_WORKERS: ${SERVER_WORKERS:-2}
 
+      # Langfuse 配置（可选）
+      LANGFUSE_TRACING_ENABLED: ${LANGFUSE_TRACING_ENABLED:-false}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL:-}
+
     ports:
       # 前端（通过 nginx）
       - "18080:80"
