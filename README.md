@@ -25,6 +25,8 @@
 
 
 
+
+
 Aix-DB 基于 **LangChain/LangGraph** 框架，结合 **MCP Skills** 多智能体协作架构，实现自然语言到数据洞察的端到端转换。
 
 **核心能力**：通用问答 · 数据问答（Text2SQL） · 表格问答 · 深度搜索 · 数据可视化 · MCP 多智能体
@@ -227,7 +229,7 @@ npm run dev
     <td align="center"><b>微信公众号</b></td>
   </tr>
   <tr>
-    <td align="center"><img src="./docs/docs/images/wchat_account.jpg" alt="微信公众号" width="180"/></td>
+    <td align="center"><img src="./docs/docs/images/qrcode.jpg" alt="微信公众号" width="180"/></td>
   </tr>
 </table>
 
