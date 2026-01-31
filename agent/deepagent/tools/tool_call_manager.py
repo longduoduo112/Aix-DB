@@ -240,8 +240,9 @@ class ToolCallManager:
         检测循环调用模式
 
         检测策略:
-        1. 检测短循环: A-B-A-B 或 A-A-A
-        2. 检测中等循环: A-B-C-A-B-C
+        - 只检测涉及多个不同工具的循环模式（如 A-B-A-B 或 A-B-C-A-B-C）
+        - 单一工具的连续调用（如 sql_db_query 执行多个不同 SQL）不视为循环
+          （这种情况由 MAX_CONSECUTIVE_SAME_TOOL 来限制）
         """
         if len(ctx.recent_tool_calls) < self.PATTERN_DETECTION_WINDOW:
             return False, ""
@@ -252,13 +253,20 @@ class ToolCallManager:
         ]
         recent_tools.append(current_tool)
 
-        # 检测短循环模式 (长度 2-4)
+        # 检测循环模式 (长度 2-4)，但排除单一工具连续调用的情况
         for pattern_len in range(2, 5):
             if len(recent_tools) >= pattern_len * 2:
                 pattern = tuple(recent_tools[-pattern_len:])
                 prev_pattern = tuple(recent_tools[-pattern_len * 2 : -pattern_len])
 
                 if pattern == prev_pattern:
+                    # 检查模式是否只包含单一工具（排除这种情况）
+                    unique_tools_in_pattern = set(pattern)
+                    if len(unique_tools_in_pattern) == 1:
+                        # 单一工具连续调用，不视为循环模式，交给 MAX_CONSECUTIVE_SAME_TOOL 处理
+                        continue
+                    
+                    # 涉及多个工具的循环模式
                     pattern_str = "->".join(pattern)
                     if pattern_str not in ctx.detected_patterns:
                         ctx.detected_patterns.add(pattern_str)

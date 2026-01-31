@@ -56,7 +56,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 class DeepAgent:
     """
     基于 DeepAgents 的 Text-to-SQL 智能体，支持多轮对话记忆
-    
+
     优化特性：
     - 会话级工具调用管理，防止死循环
     - 分步超时控制，避免长时间阻塞
@@ -69,17 +69,17 @@ class DeepAgent:
     # - 子代理（subagent/task）也会消耗递归次数
     # - 报告生成等复杂任务可能需要较多步骤
     # - 设置为 60 是一个平衡点：足够完成复杂任务，同时防止无限循环
-    DEFAULT_RECURSION_LIMIT = 60
-    
+    DEFAULT_RECURSION_LIMIT = 400
+
     # LLM 超时配置（秒）
     DEFAULT_LLM_TIMEOUT = 5 * 60  # 5 分钟，单次 LLM 调用超时
-    
+
     # 流式响应超时（秒）- 如果长时间没有新消息，则认为可能卡住
     STREAM_IDLE_TIMEOUT = 3 * 60  # 3 分钟无新消息
-    
+
     # 总任务超时（秒）
     TASK_TIMEOUT = 15 * 60  # 15 分钟
-    
+
     # 最大消息数量（防止上下文过长）
     MAX_MESSAGES = 100
 
@@ -99,9 +99,7 @@ class DeepAgent:
         self.RECURSION_LIMIT = int(
             os.getenv("RECURSION_LIMIT", self.DEFAULT_RECURSION_LIMIT)
         )
-        self.LLM_TIMEOUT = int(
-            os.getenv("LLM_TIMEOUT", self.DEFAULT_LLM_TIMEOUT)
-        )
+        self.LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", self.DEFAULT_LLM_TIMEOUT))
 
         # 工具调用管理器
         self.tool_manager = get_tool_call_manager()
@@ -161,34 +159,37 @@ class DeepAgent:
     def _wrap_tools_with_tracking(self, tools: list, session_id: str) -> list:
         """
         包装工具列表，为每个工具添加调用统计功能
-        
+
         Args:
             tools: 原始工具列表
             session_id: 会话ID
-            
+
         Returns:
             包装后的工具列表
         """
-        from langchain_core.tools import StructuredTool
         from functools import wraps
-        
+
+        from langchain_core.tools import StructuredTool
+
         wrapped_tools = []
-        
+
         for tool in tools:
-            original_func = tool.func if hasattr(tool, 'func') else tool._run
+            original_func = tool.func if hasattr(tool, "func") else tool._run
             tool_name = tool.name
-            
+
             @wraps(original_func)
             def create_wrapper(orig_func, t_name):
                 def wrapper(*args, **kwargs):
                     # 调用前检查
-                    query = kwargs.get('query') or (args[0] if args else None)
-                    allowed, reason = self.tool_manager.check_before_call(session_id, t_name, query)
-                    
+                    query = kwargs.get("query") or (args[0] if args else None)
+                    allowed, reason = self.tool_manager.check_before_call(
+                        session_id, t_name, query
+                    )
+
                     if not allowed:
                         logger.warning(f"工具调用被阻止: {t_name}, 原因: {reason}")
                         return f"操作被阻止: {reason}"
-                    
+
                     # 执行工具
                     try:
                         result = orig_func(*args, **kwargs)
@@ -197,40 +198,39 @@ class DeepAgent:
                     except Exception as e:
                         self.tool_manager.record_call(session_id, t_name, False, query)
                         raise
+
                 return wrapper
-            
+
             # 创建包装后的工具
             wrapped_func = create_wrapper(original_func, tool_name)
-            
+
             wrapped_tool = StructuredTool(
                 name=tool.name,
                 description=tool.description,
                 func=wrapped_func,
-                args_schema=tool.args_schema if hasattr(tool, 'args_schema') else None,
+                args_schema=tool.args_schema if hasattr(tool, "args_schema") else None,
             )
             wrapped_tools.append(wrapped_tool)
-        
+
         logger.info(f"已包装 {len(wrapped_tools)} 个工具用于调用统计")
         return wrapped_tools
 
     def _create_sql_deep_agent(self, datasource_id: int = None, session_id: str = None):
         """
         创建并返回一个 text-to-SQL Deep Agent，支持所有数据源类型
-        
+
         Args:
             datasource_id: 数据源 ID
             session_id: 会话 ID，用于工具调用管理
         """
         if not datasource_id:
             raise ValueError("必须提供数据源ID (datasource_id)")
-        
+
         logger.info(f"创建 Deep Agent - 数据源: {datasource_id}, 会话: {session_id}")
-        
+
         db_pool = get_db_pool()
         with db_pool.get_session() as session:
-            datasource = DatasourceService.get_datasource_by_id(
-                session, datasource_id
-            )
+            datasource = DatasourceService.get_datasource_by_id(session, datasource_id)
             if not datasource:
                 raise ValueError(f"数据源 {datasource_id} 不存在")
 
@@ -250,9 +250,7 @@ class DeepAgent:
                     f"数据源 {datasource_id} ({datasource.type}) 使用 SQLAlchemy 连接"
                 )
 
-                config = DatasourceConfigUtil.decrypt_config(
-                    datasource.configuration
-                )
+                config = DatasourceConfigUtil.decrypt_config(datasource.configuration)
                 uri = DatasourceConnectionUtil.build_connection_uri(
                     datasource.type, config
                 )
@@ -260,7 +258,7 @@ class DeepAgent:
                 db = SQLDatabase.from_uri(uri, sample_rows_in_table_info=3)
                 toolkit = SQLDatabaseToolkit(db=db, llm=model)
                 original_tools = toolkit.get_tools()
-                
+
                 # 包装 SQLAlchemy 工具以添加统计功能
                 sql_tools = self._wrap_tools_with_tracking(original_tools, session_id)
             else:
@@ -288,6 +286,7 @@ class DeepAgent:
                 upload_html_file_to_minio,
                 upload_html_report_to_minio,
             )
+
             upload_tools = [upload_html_report_to_minio, upload_html_file_to_minio]
             all_tools = sql_tools + upload_tools
             logger.info("报告上传工具已加载")
@@ -321,7 +320,7 @@ class DeepAgent:
     ):
         """
         运行智能体，支持多轮对话记忆和实时思考过程输出
-        
+
         Args:
             query: 用户输入
             response: 响应对象
@@ -342,16 +341,16 @@ class DeepAgent:
         # 获取用户信息
         user_dict = await decode_jwt_token(user_token)
         task_id = user_dict["id"]
-        
+
         # 生成唯一的会话标识
         effective_session_id = session_id or f"sql-agent-{datasource_id}-{task_id}"
-        
+
         # 设置当前会话（供工具调用管理器使用）
         set_current_session(effective_session_id)
-        
+
         # 重置会话的工具调用状态（新问题开始时）
         self.tool_manager.reset_session(effective_session_id)
-        
+
         task_context = {
             "cancelled": False,
             "start_time": time.time(),
@@ -370,6 +369,7 @@ class DeepAgent:
             # 准备 tracing 配置
             if self.ENABLE_TRACING:
                 from langfuse.langchain import CallbackHandler
+
                 langfuse_handler = CallbackHandler()
                 config["callbacks"] = [langfuse_handler]
                 config["metadata"] = {"langfuse_session_id": session_id}
@@ -425,7 +425,9 @@ class DeepAgent:
                 logger.error(f"Agent运行异常: {e}")
                 traceback.print_exception(e)
                 try:
-                    error_msg = f"❌ **错误**: 智能体运行异常\n\n```\n{str(e)[:200]}\n```\n"
+                    error_msg = (
+                        f"❌ **错误**: 智能体运行异常\n\n```\n{str(e)[:200]}\n```\n"
+                    )
                     await self._safe_write(
                         response, error_msg, "error", DataTypeEnum.ANSWER.value[0]
                     )
@@ -437,7 +439,7 @@ class DeepAgent:
                 elapsed = time.time() - self.running_tasks[task_id].get("start_time", 0)
                 logger.info(f"任务 {task_id} 结束，耗时: {elapsed:.2f}秒")
                 del self.running_tasks[task_id]
-            
+
             # 获取并记录工具调用统计
             stats = self.tool_manager.get_stats(effective_session_id)
             logger.info(f"工具调用统计: {stats}")
@@ -460,6 +462,7 @@ class DeepAgent:
         """执行 agent 流式处理（带 tracing 支持）"""
         if self.ENABLE_TRACING:
             from langfuse import get_client
+
             langfuse = get_client()
             with langfuse.start_as_current_observation(
                 input=query,
@@ -470,15 +473,33 @@ class DeepAgent:
                 user_id = user_info.get("id")
                 rootspan.update_trace(session_id=session_id, user_id=user_id)
                 await self._stream_agent_response(
-                    agent, stream_args, response, task_id,
-                    t02_answer_data, uuid_str, session_id, query,
-                    file_list, user_token, datasource_id, effective_session_id,
+                    agent,
+                    stream_args,
+                    response,
+                    task_id,
+                    t02_answer_data,
+                    uuid_str,
+                    session_id,
+                    query,
+                    file_list,
+                    user_token,
+                    datasource_id,
+                    effective_session_id,
                 )
         else:
             await self._stream_agent_response(
-                agent, stream_args, response, task_id,
-                t02_answer_data, uuid_str, session_id, query,
-                file_list, user_token, datasource_id, effective_session_id,
+                agent,
+                stream_args,
+                response,
+                task_id,
+                t02_answer_data,
+                uuid_str,
+                session_id,
+                query,
+                file_list,
+                user_token,
+                datasource_id,
+                effective_session_id,
             )
 
     async def _stream_agent_response(
@@ -501,23 +522,27 @@ class DeepAgent:
         printed_count = 0
         connection_closed = False
         last_message_time = time.time()
-        
+
         logger.info(f"开始流式响应处理 - 任务ID: {task_id}, 查询: {query[:100]}")
-        
+
         try:
             async for chunk in agent.astream(**stream_args):
                 current_time = time.time()
-                
+
                 # 检查是否已取消
                 if self._is_task_cancelled(task_id):
-                    await self._handle_task_cancellation(response, is_user_cancelled=True)
+                    await self._handle_task_cancellation(
+                        response, is_user_cancelled=True
+                    )
                     return
 
                 # 检查工具调用管理器是否触发终止
                 if effective_session_id:
                     ctx = self.tool_manager.get_session(effective_session_id)
                     if ctx.should_terminate:
-                        logger.warning(f"工具调用管理器触发终止: {ctx.termination_reason}")
+                        logger.warning(
+                            f"工具调用管理器触发终止: {ctx.termination_reason}"
+                        )
                         await self._safe_write(
                             response,
                             f"\n> ⚠️ **执行中止**\n\n{ctx.termination_reason}",
@@ -535,7 +560,7 @@ class DeepAgent:
                 # 处理消息流
                 if "messages" in chunk:
                     messages = chunk["messages"]
-                    
+
                     # 检查消息数量限制
                     if len(messages) > self.MAX_MESSAGES:
                         logger.warning(f"消息数量超过限制 ({self.MAX_MESSAGES})")
@@ -546,21 +571,23 @@ class DeepAgent:
                             DataTypeEnum.ANSWER.value[0],
                         )
                         break
-                    
+
                     if len(messages) > printed_count:
                         for msg in messages[printed_count:]:
                             if self._is_task_cancelled(task_id):
-                                await self._handle_task_cancellation(response, is_user_cancelled=True)
+                                await self._handle_task_cancellation(
+                                    response, is_user_cancelled=True
+                                )
                                 return
-                            
+
                             if not await self._print_message(
                                 msg, response, t02_answer_data, task_id
                             ):
                                 connection_closed = True
                                 break
-                            
+
                             last_message_time = time.time()
-                        
+
                         printed_count = len(messages)
 
                         if connection_closed:
@@ -598,14 +625,20 @@ class DeepAgent:
                 f"消息数: {printed_count}, "
                 f"连接状态: {'已断开' if connection_closed else '正常'}"
             )
-            
+
             # 保存记录
             if not self._is_task_cancelled(task_id):
                 try:
                     await add_user_record(
-                        uuid_str, session_id, query, t02_answer_data,
-                        {}, IntentEnum.REPORT_QA.value[0],
-                        user_token, file_list, datasource_id,
+                        uuid_str,
+                        session_id,
+                        query,
+                        t02_answer_data,
+                        {},
+                        IntentEnum.REPORT_QA.value[0],
+                        user_token,
+                        file_list,
+                        datasource_id,
                     )
                 except Exception as e:
                     logger.error(f"保存用户记录失败: {e}", exc_info=True)
@@ -626,21 +659,19 @@ class DeepAgent:
         await self._safe_write(
             response, timeout_msg, "error", DataTypeEnum.ANSWER.value[0]
         )
-        await self._safe_write(
-            response, "", "end", DataTypeEnum.STREAM_END.value[0]
-        )
+        await self._safe_write(response, "", "end", DataTypeEnum.STREAM_END.value[0])
 
     async def _handle_stream_error(self, response, e: Exception):
         """处理流式响应错误"""
         error_type = type(e).__name__
         error_msg = str(e).lower()
-        
+
         is_timeout = (
             "timeout" in error_msg
             or "timed out" in error_msg
             or error_type in ["TimeoutError", "asyncio.TimeoutError"]
         )
-        
+
         if is_timeout:
             logger.error(f"LLM 调用超时: {error_type}: {e}", exc_info=True)
             await self._handle_timeout(response, "LLM 响应超时")
@@ -689,43 +720,55 @@ class DeepAgent:
 
     def _is_task_cancelled(self, task_id: str) -> bool:
         """检查任务是否已被取消"""
-        return (
-            task_id in self.running_tasks
-            and self.running_tasks[task_id].get("cancelled", False)
+        return task_id in self.running_tasks and self.running_tasks[task_id].get(
+            "cancelled", False
         )
 
     def _is_connection_error(self, exception: Exception) -> bool:
         """判断是否是连接断开相关的异常"""
         error_type = type(exception).__name__
         error_msg = str(exception).lower()
-        
+
         connection_error_types = [
-            "ConnectionClosed", "ConnectionResetError", "BrokenPipeError",
-            "ConnectionError", "OSError",
+            "ConnectionClosed",
+            "ConnectionResetError",
+            "BrokenPipeError",
+            "ConnectionError",
+            "OSError",
         ]
-        
+
         connection_error_keywords = [
-            "connection closed", "connection reset", "broken pipe",
-            "client disconnected", "connection aborted", "transport closed",
+            "connection closed",
+            "connection reset",
+            "broken pipe",
+            "client disconnected",
+            "connection aborted",
+            "transport closed",
         ]
-        
+
         if error_type in connection_error_types:
             return True
-        
+
         for keyword in connection_error_keywords:
             if keyword in error_msg:
                 return True
-        
+
         return False
 
     async def _safe_write(
-        self, response, content: str, message_type: str = "continue", data_type: str = None
+        self,
+        response,
+        content: str,
+        message_type: str = "continue",
+        data_type: str = None,
     ):
         """安全地写入响应"""
         try:
             if data_type is None:
                 data_type = DataTypeEnum.ANSWER.value[0]
-            await response.write(self._create_response(content, message_type, data_type))
+            await response.write(
+                self._create_response(content, message_type, data_type)
+            )
             if hasattr(response, "flush"):
                 await response.flush()
             return True
@@ -742,7 +785,7 @@ class DeepAgent:
                 message = "\n> ⚠️ 任务已被用户取消"
             else:
                 message = "\n> ⚠️ 连接已断开，任务已中断"
-            
+
             await self._safe_write(
                 response, message, "info", DataTypeEnum.ANSWER.value[0]
             )
@@ -780,7 +823,7 @@ class DeepAgent:
                 if content and content.strip():
                     if task_id and self._is_task_cancelled(task_id):
                         return False
-                    
+
                     formatted_content = self._format_agent_content(content)
                     t02_answer_data.append(formatted_content)
                     if not await self._safe_write(response, formatted_content):
@@ -790,10 +833,10 @@ class DeepAgent:
                     for tc in msg.tool_calls:
                         if task_id and self._is_task_cancelled(task_id):
                             return False
-                        
+
                         name = tc.get("name", "unknown")
                         args = tc.get("args", {})
-                        
+
                         tool_msg = self._format_tool_call(name, args)
                         if tool_msg:
                             if not await self._safe_write(response, tool_msg, "info"):
@@ -802,7 +845,7 @@ class DeepAgent:
             elif isinstance(msg, ToolMessage):
                 if task_id and self._is_task_cancelled(task_id):
                     return False
-                
+
                 name = getattr(msg, "name", "")
                 content_str = str(msg.content) if msg.content else ""
                 tool_result_msg = self._format_tool_result(name, content_str)
