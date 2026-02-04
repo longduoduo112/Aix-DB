@@ -188,7 +188,12 @@ class DeepAgent:
 
                     if not allowed:
                         logger.warning(f"工具调用被阻止: {t_name}, 原因: {reason}")
-                        return f"操作被阻止: {reason}"
+                        # 返回明确的停止指令，让 Agent 知道应该停止尝试
+                        return (
+                            f"⛔ 操作已被系统阻止: {reason}\n\n"
+                            "【重要指令】请立即停止所有工具调用，不要再尝试任何 SQL 查询或工具操作。"
+                            "请直接向用户总结已获得的信息，或告知用户需要简化查询需求。"
+                        )
 
                     # 执行工具
                     try:
@@ -378,10 +383,11 @@ class DeepAgent:
             agent = self._create_sql_deep_agent(datasource_id, effective_session_id)
 
             # 准备流式处理参数
+            # 使用混合模式：messages 用于 token 级别流式输出，updates 用于工具调用结果
             stream_args = {
                 "input": {"messages": [HumanMessage(content=query)]},
                 "config": config,
-                "stream_mode": "values",
+                "stream_mode": ["messages", "updates"],
             }
 
             # 包装执行，添加总超时控制
@@ -517,16 +523,28 @@ class DeepAgent:
         datasource_id: int = None,
         effective_session_id: str = None,
     ):
-        """处理 agent 流式响应的核心逻辑"""
+        """
+        处理 agent 流式响应的核心逻辑
+
+        混合模式 stream_mode=["messages", "updates"] 返回格式：
+        - (mode, chunk) 元组
+        - mode="messages" 时，chunk 是 (message_chunk, metadata) 元组，用于 token 级别流式
+        - mode="updates" 时，chunk 是状态更新字典，用于工具调用结果
+        """
         start_time = time.time()
-        printed_count = 0
+        message_count = 0
+        token_count = 0
         connection_closed = False
         last_message_time = time.time()
 
-        logger.info(f"开始流式响应处理 - 任务ID: {task_id}, 查询: {query[:100]}")
+        # 用于累积 token 流式输出的缓冲区
+        current_content_buffer = ""
+        current_node = None
+
+        logger.info(f"开始流式响应处理（混合模式） - 任务ID: {task_id}, 查询: {query[:100]}")
 
         try:
-            async for chunk in agent.astream(**stream_args):
+            async for mode, chunk in agent.astream(**stream_args):
                 current_time = time.time()
 
                 # 检查是否已取消
@@ -557,51 +575,148 @@ class DeepAgent:
                     await self._handle_timeout(response, "长时间无响应")
                     break
 
-                # 处理消息流
-                if "messages" in chunk:
-                    messages = chunk["messages"]
+                # 处理 messages 模式 - token 级别流式输出
+                if mode == "messages":
+                    # 再次检查终止状态（工具调用可能在处理过程中触发终止）
+                    if effective_session_id:
+                        ctx = self.tool_manager.get_session(effective_session_id)
+                        if ctx.should_terminate:
+                            logger.warning(f"messages 模式中检测到终止: {ctx.termination_reason}")
+                            await self._safe_write(
+                                response,
+                                f"\n\n> ⚠️ **执行中止**\n\n{ctx.termination_reason}",
+                                "warning",
+                                DataTypeEnum.ANSWER.value[0],
+                            )
+                            connection_closed = True
+                            break
 
-                    # 检查消息数量限制
-                    if len(messages) > self.MAX_MESSAGES:
-                        logger.warning(f"消息数量超过限制 ({self.MAX_MESSAGES})")
-                        await self._safe_write(
-                            response,
-                            "\n> ⚠️ **对话过长**: 已达到消息数量上限，请开启新对话。",
-                            "warning",
-                            DataTypeEnum.ANSWER.value[0],
-                        )
-                        break
+                    message_chunk, metadata = chunk
+                    node_name = metadata.get("langgraph_node", "")
 
-                    if len(messages) > printed_count:
-                        for msg in messages[printed_count:]:
-                            if self._is_task_cancelled(task_id):
-                                await self._handle_task_cancellation(
-                                    response, is_user_cancelled=True
-                                )
-                                return
+                    # 跳过工具节点的消息（工具结果通过 updates 模式处理）
+                    if node_name == "tools":
+                        continue
 
-                            if not await self._print_message(
-                                msg, response, t02_answer_data, task_id
-                            ):
+                    # 处理 LLM 输出的 token
+                    if hasattr(message_chunk, "content") and message_chunk.content:
+                        content = message_chunk.content
+
+                        # 处理内容（可能是字符串或列表）
+                        if isinstance(content, str):
+                            token_text = content
+                        elif isinstance(content, list):
+                            # 提取文本内容
+                            text_parts = []
+                            for part in content:
+                                if isinstance(part, dict) and part.get("type") == "text":
+                                    text_parts.append(part.get("text", ""))
+                                elif isinstance(part, str):
+                                    text_parts.append(part)
+                            token_text = "".join(text_parts)
+                        else:
+                            token_text = str(content) if content else ""
+
+                        if token_text:
+                            token_count += 1
+                            last_message_time = time.time()
+
+                            # 直接输出 token（实时流式）
+                            if not await self._safe_write(response, token_text):
                                 connection_closed = True
                                 break
 
-                            last_message_time = time.time()
+                            # 累积到缓冲区用于记录
+                            current_content_buffer += token_text
 
-                        printed_count = len(messages)
+                            # 定期刷新
+                            if token_count % 10 == 0 and hasattr(response, "flush"):
+                                try:
+                                    await response.flush()
+                                except Exception as e:
+                                    if self._is_connection_error(e):
+                                        connection_closed = True
+                                        break
+                                    raise
+
+                            await asyncio.sleep(0)
+
+                # 处理 updates 模式 - 状态更新（工具调用结果等）
+                elif mode == "updates":
+                    # 检查终止状态（工具调用可能触发终止）
+                    if effective_session_id:
+                        ctx = self.tool_manager.get_session(effective_session_id)
+                        if ctx.should_terminate:
+                            logger.warning(f"updates 模式中检测到终止: {ctx.termination_reason}")
+                            await self._safe_write(
+                                response,
+                                f"\n\n> ⚠️ **执行中止**\n\n{ctx.termination_reason}",
+                                "warning",
+                                DataTypeEnum.ANSWER.value[0],
+                            )
+                            connection_closed = True
+                            break
+
+                    # chunk 是一个字典，键是节点名称，值是该节点的输出
+                    for node_name, node_output in chunk.items():
+                        if self._is_task_cancelled(task_id):
+                            await self._handle_task_cancellation(
+                                response, is_user_cancelled=True
+                            )
+                            return
+
+                        # 如果有累积的内容，先保存到记录中
+                        if current_content_buffer:
+                            t02_answer_data.append(current_content_buffer)
+                            current_content_buffer = ""
+
+                        # 处理消息更新（跳过空输出）
+                        if node_output is None:
+                            continue
+                        if not isinstance(node_output, dict):
+                            continue
+                        if "messages" in node_output:
+                            messages = node_output["messages"]
+                            if not isinstance(messages, list):
+                                messages = [messages]
+
+                            for msg in messages:
+                                message_count += 1
+                                last_message_time = time.time()
+
+                                # 检查消息数量限制
+                                if message_count > self.MAX_MESSAGES:
+                                    logger.warning(f"消息数量超过限制 ({self.MAX_MESSAGES})")
+                                    await self._safe_write(
+                                        response,
+                                        "\n> ⚠️ **对话过长**: 已达到消息数量上限，请开启新对话。",
+                                        "warning",
+                                        DataTypeEnum.ANSWER.value[0],
+                                    )
+                                    break
+
+                                # 处理工具调用和结果
+                                if not await self._process_update_message(
+                                    msg, response, t02_answer_data, task_id, node_name
+                                ):
+                                    connection_closed = True
+                                    break
 
                         if connection_closed:
                             break
 
-                        if hasattr(response, "flush"):
-                            try:
-                                await response.flush()
-                            except Exception as e:
-                                if self._is_connection_error(e):
-                                    connection_closed = True
-                                    break
-                                raise
-                        await asyncio.sleep(0)
+                    if connection_closed:
+                        break
+
+                    if hasattr(response, "flush"):
+                        try:
+                            await response.flush()
+                        except Exception as e:
+                            if self._is_connection_error(e):
+                                connection_closed = True
+                                break
+                            raise
+                    await asyncio.sleep(0)
 
         except asyncio.CancelledError:
             is_user_cancelled = self._is_task_cancelled(task_id)
@@ -618,11 +733,15 @@ class DeepAgent:
             else:
                 await self._handle_stream_error(response, e)
         finally:
+            # 保存最后的缓冲内容
+            if current_content_buffer:
+                t02_answer_data.append(current_content_buffer)
+
             elapsed_time = time.time() - start_time
             logger.info(
-                f"流式响应处理完成 - 任务ID: {task_id}, "
+                f"流式响应处理完成（混合模式） - 任务ID: {task_id}, "
                 f"耗时: {elapsed_time:.2f}秒 ({elapsed_time / 60:.2f}分钟), "
-                f"消息数: {printed_count}, "
+                f"消息数: {message_count}, token数: {token_count}, "
                 f"连接状态: {'已断开' if connection_closed else '正常'}"
             )
 
@@ -642,6 +761,66 @@ class DeepAgent:
                     )
                 except Exception as e:
                     logger.error(f"保存用户记录失败: {e}", exc_info=True)
+
+    async def _process_update_message(
+        self, msg, response, t02_answer_data, task_id: str, node_name: str
+    ) -> bool:
+        """
+        处理 updates 模式下的消息
+
+        Args:
+            msg: 消息对象
+            response: 响应对象
+            t02_answer_data: 答案数据列表
+            task_id: 任务ID
+            node_name: 节点名称
+
+        Returns:
+            bool: 是否成功处理（False 表示连接断开）
+        """
+        if task_id and self._is_task_cancelled(task_id):
+            return False
+
+        try:
+            # 处理工具调用（AIMessage with tool_calls）
+            if isinstance(msg, AIMessage):
+                if hasattr(msg, "tool_calls") and msg.tool_calls:
+                    for tc in msg.tool_calls:
+                        if task_id and self._is_task_cancelled(task_id):
+                            return False
+
+                        name = tc.get("name", "unknown")
+                        args = tc.get("args", {})
+
+                        tool_msg = self._format_tool_call(name, args)
+                        if tool_msg:
+                            # 输出换行以分隔 token 流和工具调用
+                            if not await self._safe_write(response, "\n\n"):
+                                return False
+                            if not await self._safe_write(response, tool_msg, "info"):
+                                return False
+                            t02_answer_data.append(tool_msg)
+
+            # 处理工具结果（ToolMessage）
+            elif isinstance(msg, ToolMessage):
+                if task_id and self._is_task_cancelled(task_id):
+                    return False
+
+                name = getattr(msg, "name", "")
+                content_str = str(msg.content) if msg.content else ""
+                tool_result_msg = self._format_tool_result(name, content_str)
+                if tool_result_msg:
+                    msg_type = "error" if "error" in content_str.lower() else "info"
+                    if not await self._safe_write(response, tool_result_msg, msg_type):
+                        return False
+                    t02_answer_data.append(tool_result_msg)
+
+            return True
+        except Exception as e:
+            if self._is_connection_error(e):
+                logger.info(f"处理更新消息时连接断开: {type(e).__name__}")
+                return False
+            raise
 
     async def _handle_timeout(self, response, reason: str):
         """处理超时"""

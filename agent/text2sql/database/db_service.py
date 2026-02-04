@@ -61,28 +61,28 @@ def get_embedding_model_config():
     with db_pool.get_session() as session:
         # model_type: 2 -> Embedding
         model = session.query(TAiModel).filter(TAiModel.model_type == 2, TAiModel.default_model == True).first()
-        
+
         if not model:
             # 尝试查找任何 embedding 模型
             model = session.query(TAiModel).filter(TAiModel.model_type == 2).first()
-        
+
         if not model:
             # 没有找到在线模型，返回 None（将使用离线模型）
             return None
-        
+
         # 处理 base_url，确保包含协议前缀
         base_url = (model.api_domain or "").strip()
         if not base_url:
             logger.warning("表结构检索使用的 embedding 模型 API Domain 为空，将使用离线模型")
             return None
-        
+
         if not base_url.startswith(("http://", "https://")):
             # 本地地址默认 http，其它默认 https
             if base_url.startswith(("localhost", "127.0.0.1", "0.0.0.0")):
                 base_url = f"http://{base_url}"
             else:
                 base_url = f"https://{base_url}"
-        
+
         return {"name": model.base_model, "api_key": model.api_key, "base_url": base_url}
 
 
@@ -394,14 +394,14 @@ class DatabaseService:
                         DatasourceTable.ds_id == self._datasource_id,
                         DatasourceTable.table_name.in_(table_names)
                     ).all()
-                    
+
                     # 获取所有规则
                     rules_stmt = select(TDsRules).where(TDsRules.enable == True)
                     rules = session.execute(rules_stmt).scalars().all()
-                    
+
                     for table in tables:
                         allowed_fields = set()
-                        
+
                         # 如果有规则，查询列权限配置
                         if rules:
                             permissions_stmt = select(TDsPermission).where(
@@ -410,7 +410,7 @@ class DatabaseService:
                                 TDsPermission.enable == True
                             )
                             column_perms = session.execute(permissions_stmt).scalars().all()
-                            
+
                             if column_perms:
                                 # 检查权限是否与用户匹配
                                 matching_permissions = []
@@ -422,21 +422,21 @@ class DatabaseService:
                                                 perm_ids = json.loads(rule.permission_list)
                                             except:
                                                 pass
-                                        
+
                                         user_ids = []
                                         if rule.user_list:
                                             try:
                                                 user_ids = json.loads(rule.user_list)
                                             except:
                                                 pass
-                                        
+
                                         if perm_ids and user_ids:
                                             if permission.id in perm_ids and (
                                                 user_id in user_ids or str(user_id) in user_ids
                                             ):
                                                 matching_permissions.append(permission)
                                                 break
-                                
+
                                 # 解析列权限配置
                                 for perm in matching_permissions:
                                     if perm.permissions:
@@ -450,7 +450,7 @@ class DatabaseService:
                                                             allowed_fields.add(field_name)
                                         except Exception as e:
                                             logger.debug(f"解析列权限配置失败: {e}, permission_id={perm.id}")
-                        
+
                         # 如果没有匹配的权限配置，使用 checked 字段作为基础
                         if not allowed_fields:
                             fields = session.query(DatasourceField).filter(
@@ -459,10 +459,10 @@ class DatabaseService:
                                 DatasourceField.checked == True
                             ).all()
                             allowed_fields = {field.field_name for field in fields}
-                        
+
                         if allowed_fields:
                             column_permissions[table.table_name] = allowed_fields
-                            
+
             except Exception as e:
                 logger.warning(f"⚠️ 获取列权限失败: {e}", exc_info=True)
 
@@ -475,7 +475,7 @@ class DatabaseService:
                     if table_name in column_permissions:
                         if col["name"] not in column_permissions[table_name]:
                             continue
-                    
+
                     columns[col["name"]] = {
                         "type": str(col["type"]),
                         "comment": str(col["comment"] or ""),
@@ -503,12 +503,12 @@ class DatabaseService:
 
         elapsed = time.time() - start_time
         logger.info(f"✅ 成功加载 {len(table_info)} 张表，耗时 {elapsed:.2f}s")
-        
+
         # 更新缓存
         if use_cache:
             with _cache_lock:
                 _table_info_cache[cache_key] = (table_info, time.time())
-        
+
         return table_info
 
     def _fetch_table_info_from_metadata(self, user_id: Optional[int], use_cache: bool, start_time: float) -> Dict[str, Dict]:
@@ -598,7 +598,7 @@ class DatabaseService:
         """
         if not self._datasource_id:
             return None, [], list(table_info.keys())
-        
+
         try:
             with db_pool.get_session() as session:
                 # 查询数据源下的所有表（不再按表名过滤，避免大小写不一致导致漏查）
@@ -607,15 +607,15 @@ class DatabaseService:
                     .filter(DatasourceTable.ds_id == self._datasource_id)
                     .all()
                 )
-                
+
                 # 构建表名到表的映射（不区分大小写，兼容 Oracle 等会返回大写表名的数据库）
                 table_map = {str(table.table_name).upper(): table for table in tables}
-                
+
                 # 收集有预计算 embedding 的表
                 precomputed_embeddings = []
                 precomputed_table_names = []
                 missing_table_names = []
-                
+
                 for table_name, info in table_info.items():
                     # 统一按大写匹配，避免 T_ALARM_INFO / t_alarm_info 不一致导致无法命中
                     table = table_map.get(str(table_name).upper())
@@ -633,7 +633,7 @@ class DatabaseService:
                             missing_table_names.append(table_name)
                     else:
                         missing_table_names.append(table_name)
-                
+
                 if precomputed_embeddings:
                     embeddings_array = np.array(precomputed_embeddings).astype("float32")
                     faiss.normalize_L2(embeddings_array)
@@ -641,7 +641,7 @@ class DatabaseService:
                     return embeddings_array, precomputed_table_names, missing_table_names
                 else:
                     return None, [], missing_table_names
-                    
+
         except Exception as e:
             logger.warning(f"⚠️ 获取预计算 embedding 失败: {e}")
             return None, [], list(table_info.keys())
@@ -661,7 +661,7 @@ class DatabaseService:
             start_time = time.time()
             embeddings = []
             embedding_dim = None  # 动态获取维度
-            
+
             for doc in texts:
                 try:
                     embedding = generate_embedding_local_sync(doc)
@@ -679,16 +679,16 @@ class DatabaseService:
                     if embedding_dim is None:
                         embedding_dim = 768  # 默认维度
                     embeddings.append([0.0] * embedding_dim)
-            
+
             if not embeddings:
                 logger.error("❌ 所有 embedding 生成都失败")
                 return np.array([])
-            
+
             embeddings = np.array(embeddings).astype("float32")
             faiss.normalize_L2(embeddings)
             logger.info(f"✅ 离线模型嵌入生成完成，耗时 {time.time() - start_time:.2f}s，维度: {embedding_dim}")
             return embeddings
-        
+
         # 使用在线模型
         logger.info(f"🌐 调用在线嵌入模型 {self.embedding_model_name}...")
         start_time = time.time()
@@ -783,7 +783,7 @@ class DatabaseService:
                 # 使用在线模型
                 response = self.embedding_client.embeddings.create(model=self.embedding_model_name, input=query)
                 query_vec = np.array([response.data[0].embedding]).astype("float32")
-            
+
             # 检查维度是否匹配
             query_dim = query_vec.shape[1]
             index_dim = self._faiss_index.d
@@ -794,7 +794,7 @@ class DatabaseService:
                     f"建议：重新计算表的 embedding 或使用相同的模型。"
                 )
                 return []
-            
+
             faiss.normalize_L2(query_vec)
             _, indices = self._faiss_index.search(query_vec, top_k)
             return indices[0].tolist()
@@ -1173,7 +1173,7 @@ class DatabaseService:
             except Exception as e:
                 logger.error(f"❌ BM25 分词记录失败: {e}", exc_info=True)
                 state["bm25_tokens"] = []  # 分词失败时，设置为空列表
-            
+
             # 确保 user_query 也在返回的 state 中（虽然它应该已经在初始 state 中了）
             state["user_query"] = user_query
 
@@ -1182,16 +1182,16 @@ class DatabaseService:
 
             # 混合检索 - 并行执行 BM25 和向量检索以提高性能
             logger.info("🔍 开始混合检索：BM25 + 向量检索（并行执行）")
-            
+
             # 使用线程池并行执行 BM25 和向量检索
             with ThreadPoolExecutor(max_workers=2) as executor:
                 bm25_future = executor.submit(self._retrieve_by_bm25, all_table_info, user_query)
                 vector_future = executor.submit(self._retrieve_by_vector, user_query, 20)
-                
+
                 # 等待两个任务完成
                 bm25_top_indices = bm25_future.result()
                 vector_top_indices = vector_future.result()
-            
+
             logger.info(f"📊 BM25检索返回 {len(bm25_top_indices)} 个结果")
             logger.info(f"🔗 向量检索返回 {len(vector_top_indices)} 个结果")
 

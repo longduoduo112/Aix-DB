@@ -23,8 +23,31 @@
   <a href="./README.md">简体中文</a> | <a href="./README_en.md">English</a>
 </p>
 
+---
 
+<table align="center">
+  <tr>
+    <td align="center">
+      <h3>🚀 寻找企业级 AI 解决方案？</h3>
+      <a href="http://www.aixhub.top/"><img src="https://img.shields.io/badge/🤖_AiX--Bot-8A2BE2?style=for-the-badge&logoColor=white" alt="AiX-Bot" /></a>
+      <p>
+        我们的商业产品，提供更强大的企业级功能：<br/>
+        私有化部署 · 定制化开发 · 专属技术支持 · 多场景 AI 矩阵应用
+      </p>
+      <p><b>👇 点击下方场景立即体验 👇</b></p>
+      <p>
+        <a href="YOUR_CHAT_URL"><img src="https://img.shields.io/badge/💬_智能对话-4A90D9?style=for-the-badge" alt="智能对话" /></a>
+        <a href="YOUR_DATA_URL"><img src="https://img.shields.io/badge/📊_数据问答-10B981?style=for-the-badge" alt="数据问答" /></a>
+        <a href="http://www.aixhub.top:5006"><img src="https://img.shields.io/badge/📈_报告生成-F59E0B?style=for-the-badge" alt="报告生成" /></a>
+      </p>
+      <p>
+        <sub>💼 商务合作请联系微信（备注「商务合作」）| <a href="http://www.aixhub.top/">联系我们</a></sub>
+      </p>
+    </td>
+  </tr>
+</table>
 
+---
 
 
 Aix-DB 基于 **LangChain/LangGraph** 框架，结合 **MCP Skills** 多智能体协作架构，实现自然语言到数据洞察的端到端转换。
@@ -114,6 +137,10 @@ docker run -d \
   -e SERVER_HOST=0.0.0.0 \
   -e SERVER_PORT=8088 \
   -e SERVER_WORKERS=2 \
+  -e LANGFUSE_TRACING_ENABLED=false \
+  -e LANGFUSE_SECRET_KEY= \
+  -e LANGFUSE_PUBLIC_KEY= \
+  -e LANGFUSE_BASE_URL= \
   -p 18080:80 \
   -p 18088:8088 \
   -p 15432:5432 \
@@ -130,11 +157,14 @@ docker run -d \
   crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/aix-db:1.2.2
 ```
 
+> **提示**：如需启用 Langfuse 全链路追踪，请设置 `LANGFUSE_TRACING_ENABLED=true` 并配置相应的密钥和地址。
+
 ### 使用 Docker Compose
 
 ```bash
 git clone https://github.com/apconw/Aix-DB.git
 cd Aix-DB/docker
+cp .env.template .env  # 复制环境变量模板，按需修改
 docker-compose up -d
 ```
 
