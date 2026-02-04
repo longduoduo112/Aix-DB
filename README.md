@@ -128,102 +128,29 @@ Aix-DB 基于 **LangChain/LangGraph** 框架，结合 **MCP Skills** 多智能�
 ## 快速开始
 
 ### 使用 Docker 部署（推荐）
-Windows/Linux 跨平台兼容的 Docker 启动脚本
-原脚本的核心兼容性问题是路径变量和换行符：
 ```bash
-Linux/macOS 用 $(pwd) 表示当前目录，而 Windows 的 CMD/PowerShell 有专属的当前目录变量，同时 Windows CMD 对换行符有特殊要求，以下提供分终端的完整兼容脚本，直接复制对应环境使用即可。
-核心适配说明
-路径变量替换（最关键）：
-Linux/macOS/Windows PowerShell 核心兼容，仅 Windows CMD 需单独替换
-Windows CMD：%cd%（表示当前终端所在目录，CMD 专属）
-Windows PowerShell：${PWD}（PowerShell 原生变量，和 Linux 语法接近）
-Linux/macOS：保留原脚本的 $(pwd)
-换行符兼容：Windows CMD 不支持裸换行，需用 ^ 作为续行符（最后一行不加），PowerShell/Linux 可直接换行。
-```
-各环境完整可执行脚本
-1. Windows CMD 终端（最常用，比如直接打开 CMD 窗口执行）
-cmd
-```bash
-docker run -d ^
---name aix-db ^
---restart unless-stopped ^
--e TZ=Asia/Shanghai ^
--e SERVER_HOST=0.0.0.0 ^
--e SERVER_PORT=8088 ^
--e SERVER_WORKERS=2 ^
--p 18080:80 ^
--p 18088:8088 ^
--p 15432:5432 ^
--p 9000:9000 ^
--p 9001:9001 ^
--v %cd%/volume/pg_data:/var/lib/postgresql/data ^
--v %cd%/volume/minio/data:/data ^
--v %cd%/volume/logs/supervisor:/var/log/supervisor ^
--v %cd%/volume/logs/nginx:/var/log/nginx ^
--v %cd%/volume/logs/aix-db:/var/log/aix-db ^
--v %cd%/volume/logs/minio:/var/log/minio ^
--v %cd%/volume/logs/postgresql:/var/log/postgresql ^
---add-host host.docker.internal:host-gateway ^
-crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/aix-db:1.2.2
-```
-2. Windows PowerShell 终端
-powershell
- ```bash
-docker run -d `
---name aix-db `
---restart unless-stopped `
--e TZ=Asia/Shanghai `
--e SERVER_HOST=0.0.0.0 `
--e SERVER_PORT=8088 `
--e SERVER_WORKERS=2 `
--p 18080:80 `
--p 18088:8088 `
--p 15432:5432 `
--p 9000:9000 `
--p 9001:9001 `
--v ${PWD}/volume/pg_data:/var/lib/postgresql/data `
--v ${PWD}/volume/minio/data:/data `
--v ${PWD}/volume/logs/supervisor:/var/log/supervisor `
--v ${PWD}/volume/logs/nginx:/var/log/nginx `
--v ${PWD}/volume/logs/aix-db:/var/log/aix-db `
--v ${PWD}/volume/logs/minio:/var/log/minio `
--v ${PWD}/volume/logs/postgresql:/var/log/postgresql `
---add-host host.docker.internal:host-gateway `
-crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/aix-db:1.2.2
-```
-3. Linux/macOS 终端（保留原脚本，规范换行）
- ```bash 
 docker run -d \
---name aix-db \
---restart unless-stopped \
--e TZ=Asia/Shanghai \
--e SERVER_HOST=0.0.0.0 \
--e SERVER_PORT=8088 \
--e SERVER_WORKERS=2 \
--p 18080:80 \
--p 18088:8088 \
--p 15432:5432 \
--p 9000:9000 \
--p 9001:9001 \
--v $(pwd)/volume/pg_data:/var/lib/postgresql/data \
--v $(pwd)/volume/minio/data:/data \
--v $(pwd)/volume/logs/supervisor:/var/log/supervisor \
--v $(pwd)/volume/logs/nginx:/var/log/nginx \
--v $(pwd)/volume/logs/aix-db:/var/log/aix-db \
--v $(pwd)/volume/logs/minio:/var/log/minio \
--v $(pwd)/volume/logs/postgresql:/var/log/postgresql \
---add-host host.docker.internal:host-gateway \
-crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/aix-db:1.2.2
+  --name aix-db \
+  --restart unless-stopped \
+  -e TZ=Asia/Shanghai \
+  -e SERVER_HOST=0.0.0.0 \
+  -e SERVER_PORT=8088 \
+  -e SERVER_WORKERS=2 \
+  -p 18080:80 \
+  -p 18088:8088 \
+  -p 15432:5432 \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  -v ./volume/pg_data:/var/lib/postgresql/data \
+  -v ./volume/minio/data:/data \
+  -v ./volume/logs/supervisor:/var/log/supervisor \
+  -v ./volume/logs/nginx:/var/log/nginx \
+  -v ./volume/logs/aix-db:/var/log/aix-db \
+  -v ./volume/logs/minio:/var/log/minio \
+  -v ./volume/logs/postgresql:/var/log/postgresql \
+  --add-host host.docker.internal:host-gateway \
+  crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/aix-db:1.2.2
 ```
-
-关键注意事项
-执行前准备：无论哪个系统，执行脚本前请先进入脚本所在的目录（用 cd 目录路径 命令），否则 ${PWD}/%cd%/$(pwd) 会指向错误的目录，导致挂载失败。
-Docker Desktop 配置（Windows 专属）：需确保 Docker Desktop 已开启 WSL 2 后端（推荐），并在「设置 -> 资源 -> 文件共享」中勾选脚本所在的磁盘（比如 C 盘、D 盘），否则会出现目录挂载权限错误。
-路径分隔符：脚本中统一使用 / 作为路径分隔符，Docker 会自动兼容 Windows 的 \，无需手动修改。
-自动建目录：Docker 会自动创建脚本中指定的 volume 及子目录，无需手动创建，避免手动创建带来的权限问题。
- 
-
-> **提示**：如需启用 Langfuse 全链路追踪，请设置 `LANGFUSE_TRACING_ENABLED=true` 并配置相应的密钥和地址。
 
 ### 使用 Docker Compose
 
