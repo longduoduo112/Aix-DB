@@ -43,7 +43,7 @@
 <p align="center">
   <a href="YOUR_CHAT_URL"><img src="https://img.shields.io/badge/💬_智能对话-4A90D9?style=for-the-badge" alt="智能对话" /></a>
   <a href="YOUR_DATA_URL"><img src="https://img.shields.io/badge/📊_数据问答-10B981?style=for-the-badge" alt="数据问答" /></a>
-  <a href="http://www.aixhub.top:5006"><img src="https://img.shields.io/badge/📈_报告生成-F59E0B?style=for-the-badge" alt="报告生成" /></a>
+  <a href="http://www.aixhub.top:5006"><img src="https://img.shields.io/badge/📈_报告生成-F59E0B?style=for-the-badge" alt="智能写作" /></a>
 </p>
 
 <p align="center">
