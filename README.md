@@ -129,7 +129,9 @@ Aix-DB 基于 **LangChain/LangGraph** 框架，结合 **MCP Skills** 多智能�
 
 ### 使用 Docker 部署（推荐）
 Windows/Linux 跨平台兼容的 Docker 启动脚本
-原脚本的核心兼容性问题是路径变量和换行符：Linux/macOS 用 $(pwd) 表示当前目录，而 Windows 的 CMD/PowerShell 有专属的当前目录变量，同时 Windows CMD 对换行符有特殊要求，以下提供分终端的完整兼容脚本，直接复制对应环境使用即可。
+原脚本的核心兼容性问题是路径变量和换行符：
+```bash
+Linux/macOS 用 $(pwd) 表示当前目录，而 Windows 的 CMD/PowerShell 有专属的当前目录变量，同时 Windows CMD 对换行符有特殊要求，以下提供分终端的完整兼容脚本，直接复制对应环境使用即可。
 核心适配说明
 路径变量替换（最关键）：
 Linux/macOS/Windows PowerShell 核心兼容，仅 Windows CMD 需单独替换
@@ -137,6 +139,7 @@ Windows CMD：%cd%（表示当前终端所在目录，CMD 专属）
 Windows PowerShell：${PWD}（PowerShell 原生变量，和 Linux 语法接近）
 Linux/macOS：保留原脚本的 $(pwd)
 换行符兼容：Windows CMD 不支持裸换行，需用 ^ 作为续行符（最后一行不加），PowerShell/Linux 可直接换行。
+```
 各环境完整可执行脚本
 1. Windows CMD 终端（最常用，比如直接打开 CMD 窗口执行）
 cmd
@@ -211,6 +214,8 @@ docker run -d \
 -v $(pwd)/volume/logs/postgresql:/var/log/postgresql \
 --add-host host.docker.internal:host-gateway \
 crpi-7xkxsdc0iki61l0q.cn-hangzhou.personal.cr.aliyuncs.com/apconw/aix-db:1.2.2
+```
+
 关键注意事项
 执行前准备：无论哪个系统，执行脚本前请先进入脚本所在的目录（用 cd 目录路径 命令），否则 ${PWD}/%cd%/$(pwd) 会指向错误的目录，导致挂载失败。
 Docker Desktop 配置（Windows 专属）：需确保 Docker Desktop 已开启 WSL 2 后端（推荐），并在「设置 -> 资源 -> 文件共享」中勾选脚本所在的磁盘（比如 C 盘、D 盘），否则会出现目录挂载权限错误。
