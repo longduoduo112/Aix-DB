@@ -21,9 +21,9 @@ description: 通用的报告生成技能，根据用户诉求生成各类数据�
 - 支持多种报告格式和图表类型
 
 **⚠️ 重要约束：**
-- **禁止写入本地文件** - 所有生成的 HTML 报告必须直接上传到 MinIO，不允许使用任何文件系统工具保存到本地
-- **只使用 `upload_html_report_to_minio`** - 这是唯一允许的上传方法，直接传递 HTML 内容字符串
-- **禁止使用 `upload_html_file_to_minio`** - 该工具需要本地文件路径，不符合要求
+- **禁止写入本地文件** - 不允许使用任何文件系统工具保存到本地
+- **禁止调用任何上传工具** - 不使用 `upload_html_report_to_minio` 或 `upload_html_file_to_minio`
+- **HTML 报告必须直接输出到对话中** - 使用特定分隔符包裹，前端会自动识别并提供预览和下载功能
 
 ## 工作流程
 
@@ -121,76 +121,67 @@ description: 通用的报告生成技能，根据用户诉求生成各类数据�
 - **多维度对比** → 雷达图
 
 **关于 HTML 生成的重要说明：**
-- 直接生成完整的 HTML 内容作为单个字符串
+- 直接生成完整的 HTML 内容
 - 应用 UI/UX 最佳实践，包括专业的配色方案和优雅的排版
 - 根据报告类型选择合适的配色方案（业务报告用专业色调，数据报告用清晰对比色）
-- **禁止写入本地文件** - HTML 内容必须直接上传到 MinIO，不允许使用任何文件系统工具保存到本地
-- HTML 字符串应传递给 `upload_html_report_to_minio` 工具进行上传
+- **禁止写入本地文件**
+- **HTML 内容必须使用分隔符包裹后直接输出到对话中**（见步骤 5）
 
-### 5. 上传 HTML 报告到 MinIO 并返回 URL
+### 5. 直接输出 HTML 报告到对话
 
-**重要：** 生成 HTML 报告后，您必须自动将其上传到 MinIO 并向用户返回可点击的 URL。
+**重要：** 生成 HTML 报告后，必须直接在对话中输出完整的 HTML 内容，使用特定分隔符包裹。前端会自动识别并提供预览和下载功能。
 
 **⚠️ 严格禁止：**
-- **禁止使用任何文件系统工具写入本地文件**（如 `write_file`、`save_file` 等）
-- **禁止将 HTML 内容保存到本地文件系统**
-- **禁止使用 `upload_html_file_to_minio` 工具**（该工具需要本地文件路径）
-- **所有文件必须直接上传到 MinIO，不经过本地文件系统**
+- **禁止调用 `upload_html_report_to_minio`** - 不再使用此工具
+- **禁止调用 `upload_html_file_to_minio`** - 不再使用此工具
+- **禁止使用任何文件系统工具写入本地文件**
+- **禁止将 HTML 内容保存到本地文件系统或上传到任何存储服务**
 
-**唯一允许的上传方法：直接上传 HTML 内容字符串**
+**唯一允许的输出方法：使用分隔符直接输出**
 
-将 HTML 内容生成为字符串后，**必须**使用 `upload_html_report_to_minio` 工具：
+生成完整 HTML 后，使用 `<!-- REPORT_HTML_START -->` 和 `<!-- REPORT_HTML_END -->` 分隔符包裹输出：
 
 ```
-使用工具：upload_html_report_to_minio
-参数：
-  - html_content: (字符串) 完整的 HTML 报告内容
-  - file_name: (可选) 自定义文件名，例如 "user_analysis_report_2024_01.html"
-    如果未提供，自动生成： "report_YYYYMMDD_HHMMSS.html"
-  - bucket_name: (可选) 默认为 "filedata"
+<!-- REPORT_HTML_START -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>...</head>
+<body>...</body>
+</html>
+<!-- REPORT_HTML_END -->
 ```
 
 **标准工作流程（必须遵循）：**
-1. 将 HTML 内容生成为字符串变量（在内存中）
-2. **直接**使用 HTML 内容字符串调用 `upload_html_report_to_minio` 工具
-3. 工具返回预签名 URL（有效期为 7 天）
-4. 格式化并向用户返回 URL
+1. 查询数据、分析结果，用 Markdown 向用户说明分析过程
+2. 生成完整的 HTML 报告内容
+3. 使用 `<!-- REPORT_HTML_START -->` 和 `<!-- REPORT_HTML_END -->` 分隔符包裹 HTML 内容，直接输出到对话中
+4. 在 HTML 输出后，简要总结报告内容
 
-**错误示例（禁止）：**
-- ❌ 使用 `write_file` 将 HTML 保存到本地
-- ❌ 使用 `upload_html_file_to_minio` 上传本地文件
-- ❌ 任何涉及本地文件系统的操作
-
-**正确示例（必须）：**
-- ✅ 生成 HTML 字符串 → 直接调用 `upload_html_report_to_minio(html_content=html_string)`
-
-**以格式化的可点击链接形式向用户返回 URL：**
+**输出格式示例：**
 ```
-📊 **报告已生成**
+根据查询结果，我为您生成了数据分析报告。
 
-🔗 <a href="{report_url}" target="_blank" rel="noopener noreferrer">点击打开新标签页查看完整报告</a>
+<!-- REPORT_HTML_START -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+...完整 HTML 报告内容...
+</html>
+<!-- REPORT_HTML_END -->
 
-报告包含：
+**报告已生成完毕**，包含：
 - 数据统计分析
 - 可视化图表
 - 详细数据表格
 
-链接有效期：7天
+您可以在上方点击「预览报告」在新窗口查看，或点击「下载报告」保存到本地。
 ```
-- URL 是有效期为 7 天的预签名 URL
-- 前端可以在新的浏览器标签页/窗口中直接打开此 URL
-- 用户可以收藏或分享该 URL
 
 **关键要点：**
-- **始终使用上传工具** - 绝不跳过上传步骤
-- **禁止写入本地文件** - 所有文件必须直接上传到 MinIO
-- **只使用 `upload_html_report_to_minio`** - 禁止使用需要本地文件路径的工具
-- 工具自动处理所有 MinIO 操作
-- 如果未指定，文件名会自动生成带时间戳
-- MinIO URL 允许直接浏览器访问 - 7 天内无需身份验证
-- 清晰地格式化响应，以便用户知道可以点击链接
-- 包含报告中内容的简要描述
-- 文件名应具有描述性，反映报告类型和内容
+- **分隔符必须独占一行** - `<!-- REPORT_HTML_START -->` 和 `<!-- REPORT_HTML_END -->` 各占一行
+- **HTML 必须完整** - 包含 `<!DOCTYPE html>`、`<html>`、`<head>`、`<body>` 完整结构
+- **前端自动处理** - 前端会自动检测分隔符，提取 HTML 内容，并提供预览和下载按钮
+- **不需要提供链接** - 前端会自动生成预览和下载功能，无需返回 URL
+- **HTML 内容会实时流式传输** - 用户可以看到报告正在生成的进度
 
 ### 6. 应用 UI/UX Pro Max 设计原则
 
@@ -286,7 +277,7 @@ GROUP BY u.region
 ORDER BY total_users DESC;
 ```
 
-**步骤 4：** 生成带图表的 HTML 报告并上传到 MinIO
+**步骤 4：** 生成带图表的 HTML 报告并直接输出
 
 **在生成 HTML 之前，应用 UI/UX Pro Max 原则：**
 - 使用专业的配色方案（根据报告类型选择合适的色调）
@@ -938,27 +929,21 @@ ORDER BY total_users DESC;
 </script>
 ```
 
-然后使用工具自动上传到 MinIO：
+然后使用分隔符直接输出 HTML 报告：
 ```
-使用工具：upload_html_report_to_minio
-参数：
-  html_content: """<!DOCTYPE html>..."""  # 您的完整 HTML 内容
-  file_name: "user_activity_report_2024_01.html"  # 可选，如果未提供则自动生成
-  bucket_name: "filedata"  # 可选，默认为 "filedata"
+<!-- REPORT_HTML_START -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+...上面生成的完整 HTML 内容...
+</html>
+<!-- REPORT_HTML_END -->
 
-工具自动返回预签名 URL。
-
-然后格式化响应：
-📊 **报告已生成**
-
-🔗 <a href="{report_url}" target="_blank" rel="noopener noreferrer">点击打开新标签页查看完整报告</a>
-
-报告包含：
-- 数据统计分析
-- 可视化图表
+**报告已生成完毕**，包含：
+- 按地区用户数量分布柱状图
+- 各地区用户占比饼图
 - 详细数据表格
 
-链接有效期：7天
+您可以在上方点击「预览报告」在新窗口查看，或点击「下载报告」保存到本地。
 ```
 
 ## 图表类型选择指南
@@ -1089,11 +1074,10 @@ ORDER BY total_users DESC;
     - 确保 HTML 文件可以独立运行（包含所有依赖）
     - 优化加载性能：压缩 CSS，使用 CDN
 
-12. **文件处理**：
-    - **始终将 HTML 文件上传到 MinIO 并返回 URL**
-    - 在响应中将 URL 格式化为可点击链接（Markdown 格式：`[查看报告](URL)`）
-    - 使用描述性文件名：`{report_type}_{date_range}_{timestamp}.html`
-    - 例如：`sales_report_2024_Q1_20240126_143022.html`
+12. **报告输出**：
+    - **使用 `<!-- REPORT_HTML_START -->` 和 `<!-- REPORT_HTML_END -->` 分隔符包裹 HTML 内容直接输出**
+    - 前端会自动检测分隔符，提供预览和下载功能
+    - 在 HTML 输出后简要总结报告内容
 
 **对于统计分析：**
 - 计算总计、平均值、计数
@@ -1155,9 +1139,9 @@ ORDER BY total_users DESC;
   - [ ] 平滑过渡（150-300ms）
   - [ ] 不使用表情符号作为图标
   - [ ] 一致的图标集（Heroicons/Lucide）
-- **记住将 HTML 报告上传到 MinIO** - 绝不直接返回 HTML 内容
-- **禁止写入本地文件** - 必须使用 `upload_html_report_to_minio` 直接上传 HTML 字符串
-- MinIO URL 允许前端在新标签页/窗口中打开报告
-- 文件名应具有描述性，并在相关时包含时间戳或日期范围
+- **记住使用分隔符输出 HTML 报告** - 使用 `<!-- REPORT_HTML_START -->` 和 `<!-- REPORT_HTML_END -->` 包裹
+- **禁止调用任何上传工具** - 不使用 `upload_html_report_to_minio` 或 `upload_html_file_to_minio`
+- **禁止写入本地文件** - 不使用任何文件系统工具
+- 前端会自动检测分隔符，提供预览和下载按钮
 - 根据用户诉求灵活调整报告内容和格式
 - 如果用户需求不明确，主动询问澄清关键信息
