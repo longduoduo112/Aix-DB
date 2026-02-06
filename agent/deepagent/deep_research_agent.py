@@ -287,22 +287,7 @@ class DeepAgent:
                     sql_db_table_relationship,
                 ]
 
-        # 添加报告上传工具
-        try:
-            from .tools.upload_tool import (
-                upload_html_file_to_minio,
-                upload_html_report_to_minio,
-            )
-
-            upload_tools = [upload_html_report_to_minio, upload_html_file_to_minio]
-            all_tools = sql_tools + upload_tools
-            logger.info("报告上传工具已加载")
-        except ImportError as e:
-            logger.warning(f"报告上传工具导入失败: {e}，仅使用SQL工具")
-            all_tools = sql_tools
-        except Exception as e:
-            logger.warning(f"报告上传工具加载失败: {e}，仅使用SQL工具")
-            all_tools = sql_tools
+        all_tools = sql_tools
 
         # 创建 Deep Agent
         agent = create_deep_agent(
