@@ -182,7 +182,7 @@ class DatasourceConnectionUtil:
                 # SQLAlchemy 驱动的数据库
                 uri = DatasourceConnectionUtil.build_connection_uri(ds_type, config)
                 # 注意：部分驱动（如 oracledb）不支持 connect_timeout 关键字参数
-                if ds_type == "oracle":
+                if ds_type in ("oracle"):
                     engine = create_engine(uri, pool_pre_ping=True)
                 elif ds_type == "sqlServer":
                     # SQL Server 2022 需要禁用加密以兼容 pymssql
@@ -193,7 +193,9 @@ class DatasourceConnectionUtil:
                 else:
                     engine = create_engine(uri, pool_pre_ping=True, connect_args={"connect_timeout": timeout})
                 with engine.connect() as conn:
-                    conn.execute(text("SELECT 1"))
+                    # Oracle 要求 SELECT 必须有 FROM 子句
+                    test_sql = "SELECT 1 FROM DUAL" if ds_type in ("oracle") else "SELECT 1"
+                    conn.execute(text(test_sql))
                 return True, ""
 
             else:
@@ -220,11 +222,11 @@ class DatasourceConnectionUtil:
                     # 使用优化的连接参数以提高连接稳定性
                     connect_timeout = max(timeout, 60)  # 至少 60 秒连接超时
                     with pymysql.connect(
-                        user=username, 
-                        passwd=password, 
+                        user=username,
+                        passwd=password,
                         host=host,
-                        port=port, 
-                        db=database, 
+                        port=port,
+                        db=database,
                         connect_timeout=connect_timeout,
                         read_timeout=timeout,
                         write_timeout=timeout,
@@ -459,11 +461,11 @@ class DatasourceConnectionUtil:
                     # 使用优化的连接参数以提高连接稳定性
                     connect_timeout = max(timeout, 60)  # 至少 60 秒连接超时
                     with pymysql.connect(
-                        user=username, 
-                        passwd=password, 
+                        user=username,
+                        passwd=password,
                         host=host,
-                        port=port, 
-                        db=database, 
+                        port=port,
+                        db=database,
                         connect_timeout=connect_timeout,
                         read_timeout=timeout,
                         write_timeout=timeout,
@@ -719,7 +721,7 @@ class DatasourceConnectionUtil:
                                     except:
                                         return str(value)
                             return value or ""
-                        
+
                         fields.append({
                             "fieldName": _decode_value(row[0]),
                             "fieldType": _decode_value(row[1]),
@@ -753,11 +755,11 @@ class DatasourceConnectionUtil:
                     # 使用优化的连接参数以提高连接稳定性
                     connect_timeout = max(timeout, 60)  # 至少 60 秒连接超时
                     with pymysql.connect(
-                        user=username, 
-                        passwd=password, 
+                        user=username,
+                        passwd=password,
                         host=host,
-                        port=port, 
-                        db=database, 
+                        port=port,
+                        db=database,
                         connect_timeout=connect_timeout,
                         read_timeout=timeout,
                         write_timeout=timeout,
@@ -916,11 +918,11 @@ class DatasourceConnectionUtil:
                     # 4. 设置 autocommit 提高兼容性
                     connect_timeout = max(timeout, 60)  # 至少 60 秒连接超时
                     with pymysql.connect(
-                        user=username, 
-                        passwd=password, 
+                        user=username,
+                        passwd=password,
                         host=host,
-                        port=port, 
-                        db=database, 
+                        port=port,
+                        db=database,
                         connect_timeout=connect_timeout,
                         read_timeout=timeout,
                         write_timeout=timeout,

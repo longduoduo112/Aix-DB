@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { TransformStreamModelTypes } from './transform'
+import HtmlReportViewer from './HtmlReportViewer.vue'
 import MarkdownAntv from './markdown-antv.vue'
 import MarkdownInstance from './plugins/markdown'
 import SuggestedView from '@/views/chat/suggested-page.vue'
@@ -69,6 +70,14 @@ const isAbort = ref(false)
 
 const isCompleted = ref(false)
 
+// HTML 报告相关变量
+const htmlReportContent = ref('')
+const isCapturingHtml = ref(false)
+const htmlReportReady = ref(false)
+// 用于处理分隔符跨 chunk 的 lookahead buffer
+const HTML_START_DELIMITER = '<!-- REPORT_HTML_START -->'
+const HTML_END_DELIMITER = '<!-- REPORT_HTML_END -->'
+
 const refWrapperContent = ref<HTMLElement>()
 
 let typingAnimationFrame: number | null = null
@@ -114,6 +123,11 @@ const resetStatus = () => {
   displayText.value = ''
   textBuffer.value = ''
   readerLoading.value = false
+  // 重置 HTML 报告状态
+  htmlReportContent.value = ''
+  isCapturingHtml.value = false
+  htmlReportReady.value = false
+  pendingDelimiter = ''
   if (typingAnimationFrame) {
     cancelAnimationFrame(typingAnimationFrame)
     typingAnimationFrame = null
@@ -275,14 +289,93 @@ const scrollToBottomIfAtBottom = async () => {
 }
 
 /**
- * 读取 buffer 内容，逐字追加到 displayText
+ * 处理 textBuffer 中的 HTML 报告分隔符
+ * 将非 HTML 部分输出到 displayText，HTML 部分输出到 htmlReportContent
+ */
+/**
+ * 内部挂起缓冲区：存放跨 chunk 的分隔符部分匹配片段。
+ * 仅当新数据到达时才与新 chunk 合并处理，避免无限循环。
+ */
+let pendingDelimiter = ''
+
+const processBufferWithDelimiters = (chunk: string) => {
+  // 将之前挂起的部分匹配与新数据拼接
+  let remaining = pendingDelimiter + chunk
+  pendingDelimiter = ''
+
+  while (remaining.length > 0) {
+    if (isCapturingHtml.value) {
+      // 正在捕获 HTML 内容，查找结束分隔符
+      const endIdx = remaining.indexOf(HTML_END_DELIMITER)
+      if (endIdx !== -1) {
+        // 找到结束分隔符
+        htmlReportContent.value += remaining.substring(0, endIdx)
+        isCapturingHtml.value = false
+        htmlReportReady.value = true
+        remaining = remaining.substring(endIdx + HTML_END_DELIMITER.length)
+      } else {
+        // 检查尾部是否可能是结束分隔符的前缀（跨 chunk 场景）
+        let partialLen = 0
+        for (let i = Math.min(HTML_END_DELIMITER.length - 1, remaining.length); i >= 1; i--) {
+          if (HTML_END_DELIMITER.startsWith(remaining.substring(remaining.length - i))) {
+            partialLen = i
+            break
+          }
+        }
+        if (partialLen > 0) {
+          // 输出安全部分，挂起尾部
+          htmlReportContent.value += remaining.substring(0, remaining.length - partialLen)
+          pendingDelimiter = remaining.substring(remaining.length - partialLen)
+        } else {
+          htmlReportContent.value += remaining
+        }
+        remaining = ''
+      }
+    } else {
+      // 正常模式，查找开始分隔符
+      const startIdx = remaining.indexOf(HTML_START_DELIMITER)
+      if (startIdx !== -1) {
+        // 找到开始分隔符，先输出前面的普通内容
+        if (startIdx > 0) {
+          displayText.value += remaining.substring(0, startIdx)
+        }
+        isCapturingHtml.value = true
+        htmlReportContent.value = ''
+        htmlReportReady.value = false
+        remaining = remaining.substring(startIdx + HTML_START_DELIMITER.length)
+      } else {
+        // 检查尾部是否可能是开始分隔符的前缀
+        let partialLen = 0
+        for (let i = Math.min(HTML_START_DELIMITER.length - 1, remaining.length); i >= 1; i--) {
+          if (HTML_START_DELIMITER.startsWith(remaining.substring(remaining.length - i))) {
+            partialLen = i
+            break
+          }
+        }
+        if (partialLen > 0) {
+          displayText.value += remaining.substring(0, remaining.length - partialLen)
+          pendingDelimiter = remaining.substring(remaining.length - partialLen)
+        } else {
+          displayText.value += remaining
+        }
+        remaining = ''
+      }
+    }
+  }
+}
+
+/**
+ * 读取 buffer 内容，逐字追加到 displayText（支持 HTML 报告分隔符检测）
  */
 const runReadBuffer = (readCallback = () => {}, endCallback = () => {}) => {
   if (textBuffer.value.length > 0) {
-    const lengthToExtract = props.isInit || props.isView ? 1000 : 5
+    // HTML 捕获模式下一次性处理所有缓冲数据（无需打字动画），提升吞吐率
+    const lengthToExtract = isCapturingHtml.value
+      ? textBuffer.value.length
+      : (props.isInit || props.isView ? 1000 : 5)
     const nextChunk = textBuffer.value.substring(0, lengthToExtract)
-    displayText.value += nextChunk
     textBuffer.value = textBuffer.value.substring(lengthToExtract)
+    processBufferWithDelimiters(nextChunk)
     readCallback()
   } else {
     endCallback()
@@ -321,6 +414,16 @@ const showText = () => {
           if (dataType && dataType === 't04') {
             currentChartType.value = businessStore.writerList.data.template_code
           }
+        }
+
+        // 流结束时，将挂起的分隔符部分匹配作为普通文本输出
+        if (pendingDelimiter) {
+          if (isCapturingHtml.value) {
+            htmlReportContent.value += pendingDelimiter
+          } else {
+            displayText.value += pendingDelimiter
+          }
+          pendingDelimiter = ''
         }
 
         emit('update:reader', null)
@@ -380,8 +483,8 @@ onUnmounted(() => {
 // 检测是否有后端数据推送
 const hasDataReceived = computed(() => {
   // 只有当实际接收到内容时，才认为有数据推送，从而隐藏外部的 bars-scale loading
-  // 如果只是 readerLoading 为 true 但没有内容，继续显示外部 loading
-  return displayText.value.length > 0
+  // 包含 HTML 报告捕获中的情况（可能 displayText 为空但已在接收 HTML）
+  return displayText.value.length > 0 || isCapturingHtml.value || htmlReportReady.value
 })
 
 // 监听数据接收状态变化，通知父组件隐藏 bars-scale
@@ -571,7 +674,7 @@ const currentQaOption = computed(() => {
       <div
         text-16
         class="w-full h-full flex flex-col"
-        :class="[!displayText && 'items-center justify-center overflow-hidden']"
+        :class="[!displayText && !isCapturingHtml && !htmlReportReady && 'items-center justify-center overflow-hidden']"
       >
         <!-- <n-empty v-if="!displayText" size="large" class="font-bold">
                     <template #icon>
@@ -583,7 +686,7 @@ const currentQaOption = computed(() => {
 
 
         <div
-          v-if="displayText"
+          v-if="displayText || isCapturingHtml || htmlReportReady"
           ref="refWrapperContent"
           text-16
           class="w-full flex-1 overflow-y-auto"
@@ -594,6 +697,14 @@ const currentQaOption = computed(() => {
             :class="{ typing: readerLoading }"
             v-html="renderedContent"
           ></div>
+
+          <!-- HTML 报告查看器 -->
+          <HtmlReportViewer
+            v-if="isCapturingHtml || htmlReportReady"
+            :html-content="htmlReportContent"
+            :ready="htmlReportReady"
+            :generating="isCapturingHtml"
+          />
 
           <div
             v-if="shouldRenderChart"

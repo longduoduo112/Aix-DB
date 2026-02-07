@@ -99,6 +99,11 @@ autodiscover(
 # 设置 worker 状态 TTL，优先使用环境变量
 app.config.SANIC_WORKER_STATE_TTL = int(os.getenv("SANIC_WORKER_STATE_TTL", 120))
 
+# SSE 流式响应超时设置（DeepAgent 报告生成可能耗时较长）
+app.config.RESPONSE_TIMEOUT = int(os.getenv("SANIC_RESPONSE_TIMEOUT", 1200))  # 20分钟
+app.config.REQUEST_TIMEOUT = int(os.getenv("SANIC_REQUEST_TIMEOUT", 300))  # 5分钟
+app.config.KEEP_ALIVE_TIMEOUT = int(os.getenv("SANIC_KEEP_ALIVE_TIMEOUT", 120))  # 2分钟
+
 # 添加api docs
 app.extend(
     config={

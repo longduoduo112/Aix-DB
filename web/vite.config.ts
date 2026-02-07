@@ -38,6 +38,9 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           ws: true,
           rewrite: (path) => path.replace(/^\/sanic/, ''),
+          // SSE 流式响应需要较长超时（DeepAgent 报告生成耗时较长）
+          timeout: 1200000, // 20分钟
+          proxyTimeout: 1200000,
         },
         '/sse': {
           target: 'http://localhost:3300',

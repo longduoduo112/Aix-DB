@@ -73,7 +73,7 @@ dependencies = [
     "elasticsearch==8.17.1",
     "redshift-connector==2.1.4",
     "clickhouse-sqlalchemy==0.3.2",
-    "deepagents>=0.3.7",
+    "deepagents>=0.3.12",
 ]
 
 [[tool.uv.index]]

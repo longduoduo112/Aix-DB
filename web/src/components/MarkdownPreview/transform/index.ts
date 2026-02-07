@@ -81,21 +81,33 @@ export const transformStreamValue: Record<
       content = readValue
     }
     
-    // 检查是否是进度信息（从 store 传来的 JSON 字符串）
+    // 检查是否是控制信号或结构化数据（从 store 传来的 JSON 字符串）
     if (typeof content === 'string' && content.trim()) {
       try {
         const json = JSON.parse(content.trim())
+        // 检查流结束信号
+        if (json && json.done === true) {
+          return {
+            done: true,
+          }
+        }
         // 检查是否是进度信息（需要同时有 step 和 stepName）
         if (json && json.type === 'step_progress' && json.step && json.stepName && json.status && json.progressId) {
           return {
             progress: json,
           }
         }
+        // 提取 messageType/content 格式的数据（store 解析 t02 后传来的）
+        if (json.messageType !== undefined && json.content !== undefined) {
+          return {
+            content: json.content || '',
+          }
+        }
       } catch (error) {
         // 不是 JSON，继续处理为普通内容
       }
     }
-    
+
     return {
       content,
     }
@@ -218,6 +230,10 @@ export const transformStreamValue: Record<
               }
             }
           }
+          // 服务端 SSE 保活事件，不追加任何内容，避免长时间等待时连接被断开
+          if (json.dataType === 'keepalive') {
+            return { content: '' }
+          }
           // 处理自定义格式：{"data":{"messageType":"continue","content":"..."},"dataType":"t02"}
           if (json.dataType === 't02' && json.data && json.data.content !== undefined) {
             return {
@@ -314,20 +330,8 @@ export const splitStream = (splitOn): TransformStream<string, string> => {
   return new TransformStream({
     transform(chunk, controller) {
       buffer += chunk
-
-      if (buffer.trim().startsWith('data:')) {
-        buffer = processParts(buffer, controller, splitOn)
-      } else {
-        // 尝试是否能够直接解析为 JSON
-        try {
-          JSON.parse(buffer)
-          buffer = processParts(buffer, controller, splitOn)
-        } catch (error) {
-          // 如果解析失败，按原文本处理
-          controller.enqueue(chunk)
-          buffer = ''
-        }
-      }
+      // 按分隔符拆分，将完整的行 enqueue，保留最后不完整的部分在 buffer 中
+      buffer = processParts(buffer, controller, splitOn)
     },
     flush(controller) {
       if (buffer.trim() !== '') {

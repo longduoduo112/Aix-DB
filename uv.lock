@@ -190,7 +190,7 @@ requires-dist = [
     { name = "clickhouse-sqlalchemy", specifier = "==0.3.2" },
     { name = "colorlog", specifier = ">=6.9.0" },
     { name = "dashscope", specifier = ">=1.25.0" },
-    { name = "deepagents", specifier = ">=0.3.7" },
+    { name = "deepagents", specifier = ">=0.3.12" },
     { name = "duckdb", specifier = ">=1.0.0,<2.0.0" },
     { name = "elasticsearch", specifier = "==8.17.1" },
     { name = "faiss-cpu", specifier = ">=1.12.0" },
@@ -849,7 +849,7 @@ wheels = [
 
 [[package]]
 name = "deepagents"
-version = "0.3.7"
+version = "0.3.12"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "langchain" },
@@ -858,9 +858,9 @@ dependencies = [
     { name = "langchain-google-genai" },
     { name = "wcmatch" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/b3/81/2ada9232cf2917ebb6b0c200de7f51540f63a2f817162ebe75b90bbe81f4/deepagents-0.3.7.tar.gz", hash = "sha256:7cdfdeb07e7dbbcef231ed1c80f532660a0982f139ae65a6deae7ed738316b65" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/c0/0b/9d3512327d48e619567797dffb34c356b2e0c7b0aa505fd3aaef342903d3/deepagents-0.3.12.tar.gz", hash = "sha256:ab2d7e7c47040d364a20cc19cc775294c1e942456652d6c12e0f21011068633c" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/28/b0/413d89c6d1511236d66857dea65e663dc52c5fab540859069e08a5eaaf2e/deepagents-0.3.7-py3-none-any.whl", hash = "sha256:4e2cdac6b47349177f29a1fbb1c2ffec84bf14bc6e0f52d834bf18f61022ece7" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/5f/0a/2b8542a19bb22cf49827a38d04e045c6dba97d03dddc721d3ed2e7be0e5e/deepagents-0.3.12-py3-none-any.whl", hash = "sha256:42e707a1be48db3bc445fbe3243b6dc19333565cac4eab8cdc0e37d780c6cfe7" },
 ]
 
 [[package]]

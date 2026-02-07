@@ -135,7 +135,10 @@ export const useBusinessStore = defineStore('business-store', {
                 new TransformStream({
                   transform: (chunk, controller) => {
                     try {
-                      const chunkData = chunk.split('data:')[1]?.trim()
+                      // 只移除 SSE 的 data: 前缀，不用 split 避免内容中包含 data: 导致误切割
+                      const trimmed = chunk.trim()
+                      if (!trimmed.startsWith('data:')) return
+                      const chunkData = trimmed.slice(5).trim()
                       if (!chunkData) return
                       const jsonChunk = JSON.parse(chunkData)
                       if (jsonChunk.task_id) {
@@ -186,6 +189,14 @@ export const useBusinessStore = defineStore('business-store', {
                               }),
                             )
                           }
+                          break
+                        case 't99':
+                          // 流结束标记，通知下游关闭
+                          controller.enqueue(
+                            JSON.stringify({
+                              done: true,
+                            }),
+                          )
                           break
                         default:
                                                 // 可以在这里处理其他类型的 dataType

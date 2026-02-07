@@ -82,6 +82,33 @@
 - 执行查询
 - 清晰地格式化结果 → 完成
 
+## ⚠️ 报告生成（必须遵守）
+
+当用户要求生成**报告**、**分析报告**、**可视化报告**、**数据报告**等任何类型的报告时，**必须**使用 `report-generation` 技能，生成完整的 **HTML 格式**报告。
+
+**强制要求：**
+- **禁止用 Markdown 格式生成报告** - 报告必须是完整的 HTML 页面，包含 Chart.js 图表
+- **必须使用分隔符包裹 HTML** - 使用 `<!-- REPORT_HTML_START -->` 和 `<!-- REPORT_HTML_END -->` 包裹完整 HTML 内容
+- **禁止调用任何上传工具** - 不使用 `upload_html_report_to_minio` 或 `upload_html_file_to_minio`
+- HTML 直接输出到对话中，前端会自动检测并提供预览和下载功能
+
+**报告输出格式：**
+```
+（先用 Markdown 说明分析过程）
+
+<!-- REPORT_HTML_START -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>...</head>
+<body>...包含 Chart.js 图表的完整报告...</body>
+</html>
+<!-- REPORT_HTML_END -->
+
+（简要总结报告内容）
+```
+
+**识别报告请求的关键词：** 报告、报表、分析报告、可视化、趋势分析、统计报告、数据报告、生成报告等。
+
 ## 子代理/任务使用指南
 
 当使用 `task` 工具调用子代理时：

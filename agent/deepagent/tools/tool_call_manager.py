@@ -9,7 +9,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from threading import Lock
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +46,8 @@ class SessionContext:
     # 统计信息
     stats: ToolCallStats = field(default_factory=ToolCallStats)
 
-    # 循环检测
-    detected_patterns: Set[str] = field(default_factory=set)
+    # 循环检测：模式 -> 已检测到次数（放宽：多次重复才终止）
+    detected_pattern_counts: Dict[str, int] = field(default_factory=dict)
 
     # 是否已触发终止
     should_terminate: bool = False
@@ -62,13 +62,14 @@ class ToolCallManager:
     - 提供调用限制和早期终止机制
     """
 
-    # 配置参数
-    MAX_CALLS_PER_TOOL = 50  # 每个工具最大调用次数
-    MAX_TOTAL_CALLS = 100  # 总调用次数上限
-    MAX_CONSECUTIVE_SAME_TOOL = 30  # 连续调用同一工具的最大次数
-    MAX_CONSECUTIVE_FAILURES = 10  # 连续失败的最大次数
-    PATTERN_DETECTION_WINDOW = 10  # 模式检测窗口大小
-    SESSION_TIMEOUT = 30 * 60  # 会话超时时间（30分钟）
+    # 配置参数 - 收紧阈值，防止 agent 在循环中浪费过多时间
+    MAX_CALLS_PER_TOOL = 30  # 每个工具最大调用次数（原50→30）
+    MAX_TOTAL_CALLS = 60  # 总调用次数上限（原100→60）
+    MAX_CONSECUTIVE_SAME_TOOL = 15  # 连续调用同一工具的最大次数（原30→15）
+    MAX_CONSECUTIVE_FAILURES = 5  # 连续失败的最大次数（原10→5）
+    PATTERN_DETECTION_WINDOW = 12  # 模式检测窗口大小（放宽：需要更长序列才判定）
+    PATTERN_REPEAT_BEFORE_TERMINATE = 3  # 同一模式需重复检测到此次数才终止（放宽：首次仅警告）
+    SESSION_TIMEOUT = 20 * 60  # 会话超时时间（原30→20分钟，与 TASK_TIMEOUT 对齐）
 
     def __init__(self):
         self._sessions: Dict[str, SessionContext] = {}
@@ -268,12 +269,11 @@ class ToolCallManager:
                     
                     # 涉及多个工具的循环模式
                     pattern_str = "->".join(pattern)
-                    if pattern_str not in ctx.detected_patterns:
-                        ctx.detected_patterns.add(pattern_str)
-                        # 第一次检测到模式，只警告
-                        logger.warning(f"检测到循环模式: {pattern_str}")
-                    else:
-                        # 重复检测到相同模式，终止
+                    count = ctx.detected_pattern_counts.get(pattern_str, 0) + 1
+                    ctx.detected_pattern_counts[pattern_str] = count
+                    # 仅警告，达到重复次数才终止
+                    logger.warning(f"检测到循环模式: {pattern_str} (第 {count} 次)")
+                    if count >= self.PATTERN_REPEAT_BEFORE_TERMINATE:
                         return True, (
                             f"⚠️ **检测到重复调用模式**: {pattern_str}\n\n"
                             "Agent 可能陷入循环。请：\n"
