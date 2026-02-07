@@ -67,7 +67,7 @@ Aix-DB is built on the **LangChain/LangGraph** framework, combined with **MCP Sk
   </tr>
   <tr>
     <td>
-      <video src="https://github.com/user-attachments/assets/d8f973fb-3740-46cb-9bbd-d8083a83e481" controls="controls" muted="muted" style="max-height:320px; min-height: 150px;"></video>
+      <video src="https://github.com/user-attachments/assets/ee09d321-4534-4ccf-aa71-ecab83d91caf" controls="controls" muted="muted" style="max-height:320px; min-height: 150px;"></video>
     </td>
     <td>
       <video src="https://github.com/user-attachments/assets/462f4e2e-86e0-4d2a-8b78-5d6ca390c03c" controls="controls" muted="muted" style="max-height:320px; min-height: 150px;"></video>
