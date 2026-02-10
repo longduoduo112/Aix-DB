@@ -447,6 +447,8 @@ class DeepAgent:
                     message_chunk, metadata = chunk
                     node_name = metadata.get("langgraph_node", "")
 
+                    print(f"node_name: {message_chunk}, metadata: {metadata}")
+
                     # 跳过工具节点（工具结果通过 updates 模式处理）
                     if node_name == "tools":
                         continue
@@ -477,7 +479,10 @@ class DeepAgent:
                     for node_name, node_output in chunk.items():
                         if connection_closed:
                             break
-                        if not isinstance(node_output, dict) or "messages" not in node_output:
+                        if (
+                            not isinstance(node_output, dict)
+                            or "messages" not in node_output
+                        ):
                             continue
 
                         messages = node_output["messages"]
@@ -485,9 +490,7 @@ class DeepAgent:
                             messages = [messages]
 
                         for msg in messages:
-                            if not await self._process_update_message(
-                                msg, response
-                            ):
+                            if not await self._process_update_message(msg, response):
                                 connection_closed = True
                                 break
 
