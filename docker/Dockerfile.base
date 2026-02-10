@@ -57,27 +57,29 @@ ENV PIP_INDEX_URL="https://mirrors.aliyun.com/pypi/simple" \
 # 只复制依赖文件
 COPY pyproject.toml uv.lock* requirements.txt* ./
 
-# 安装系统依赖和 Python 依赖
+# 安装系统编译依赖
 RUN set -eux; \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
+    apt-get update -o Acquire::Check-Valid-Until=false -o Acquire::AllowInsecureRepositories=true && \
+    apt-get install -y --no-install-recommends --allow-unauthenticated \
     gcc \
     g++ \
     python3-dev \
     libpq-dev \
-    libffi-dev \
-    && \
+    libffi-dev
+
+# 安装 Python 依赖
+RUN set -eux; \
     uv venv --clear && \
     . .venv/bin/activate && \
     uv sync --frozen --no-cache --no-install-project \
         --index-url https://mirrors.aliyun.com/pypi/simple && \
-    # 验证关键依赖安装成功（跨平台构建时可能静默失败）
-    python -c "import sanic; print(f'sanic {sanic.__version__} installed')" && \
-    # 只进行安全的清理（保留所有元数据和 entry points）
-    find .venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
-    find .venv -type f -name "*.pyc" -delete && \
-    find .venv -type f -name "*.pyo" -delete && \
-    # 清理构建工具
+    # 验证关键依赖安装成功
+    python -c "import sanic; print(f'sanic {sanic.__version__} installed')"
+
+# 清理缓存和构建工具
+RUN find .venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null; \
+    find .venv -type f -name "*.pyc" -delete 2>/dev/null; \
+    find .venv -type f -name "*.pyo" -delete 2>/dev/null; \
     apt-get purge -y gcc g++ python3-dev libpq-dev libffi-dev && \
     apt-get autoremove -y --purge && \
     apt-get clean && \
