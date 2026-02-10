@@ -41,7 +41,18 @@ async def unified_collect(state: AgentState) -> AgentState:
             state = await data_render_ant(state)
             logger.info("✅ 图表数据生成完成")
         else:
-            logger.warning("⚠️ chart_config 为空，跳过图表数据生成")
+            # chart_config 为空，检查是否是因为查询结果为空
+            execution_result = state.get("execution_result")
+            if execution_result and execution_result.success and not execution_result.data:
+                # SQL执行成功但无数据，生成空结果卡片，让前端显示空结果提示并可查看SQL
+                logger.info("📊 SQL执行成功但无数据，生成空结果卡片")
+                state["render_data"] = {
+                    "template_code": "temp05",
+                    "columns": [],
+                    "data": [],
+                }
+            else:
+                logger.warning("⚠️ chart_config 为空，跳过图表数据生成")
     except Exception as e:
         logger.error(f"❌ 生成图表数据失败: {e}", exc_info=True)
     

@@ -106,6 +106,7 @@ const chartTitleMap: Record<string, string> = {
   temp02: '饼图',
   temp03: '柱状图',
   temp04: '折线图',
+  temp05: '查询结果',
 }
 
 const chartTitle = computed(() => chartTitleMap[templateCode.value] || '图表')
@@ -223,6 +224,12 @@ const renderChart = async () => {
     destroyChart()
     emit('tableRendered')
     // 不清空数据，保留表格数据以便显示
+    return
+  }
+
+  if (templateCode.value === 'temp05') {
+    // 空结果卡片：不需要渲染图表
+    destroyChart()
     return
   }
 
@@ -962,6 +969,26 @@ onBeforeUnmount(() => {
               />
             </div>
 
+            <!-- 空结果提示（SQL执行成功但无数据） -->
+            <div v-else-if="templateCode === 'temp05'" class="empty-result-container">
+              <div class="empty-result-content">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="empty-result-icon"
+                >
+                  <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <p class="empty-result-text">查询无结果</p>
+                <p class="empty-result-hint">当前条件下没有匹配的数据，请尝试调整查询条件</p>
+              </div>
+            </div>
+
             <!-- 图表容器（用于其他图表类型） -->
             <div
               v-else
@@ -1152,6 +1179,41 @@ onBeforeUnmount(() => {
 :deep(.n-data-table) {
   text-align: left;
   border-radius: 8px;
+}
+
+.empty-result-container {
+  width: 100%;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  background: linear-gradient(to bottom, #fafbff 0%, #ffffff 100%);
+  border-radius: 12px;
+}
+
+.empty-result-content {
+  text-align: center;
+}
+
+.empty-result-icon {
+  width: 48px;
+  height: 48px;
+  color: #b0b8c9;
+  margin-bottom: 16px;
+}
+
+.empty-result-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #4a5568;
+  margin: 0 0 8px 0;
+}
+
+.empty-result-hint {
+  font-size: 13px;
+  color: #a0aec0;
+  margin: 0;
 }
 
 .chart-container {
