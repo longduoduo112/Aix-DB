@@ -301,9 +301,7 @@ class DeepAgent:
     # ==================== 阶段检测与 <details> 管理 ====================
 
     @staticmethod
-    def _detect_phase(
-        node_name: str, content: str, tracker: PhaseTracker
-    ) -> Phase:
+    def _detect_phase(node_name: str, content: str, tracker: PhaseTracker) -> Phase:
         """
         基于 langgraph_node 元数据和内容检测当前阶段
 
@@ -332,9 +330,7 @@ class DeepAgent:
         """打开思考规划 <details> 区域"""
         return await self._safe_write(response, THINKING_SECTION_OPEN)
 
-    async def _open_subagent_section(
-        self, response, node_name: str
-    ) -> bool:
+    async def _open_subagent_section(self, response, node_name: str) -> bool:
         """打开子代理 <details> 区域"""
         label = SUB_AGENT_LABELS.get(node_name, f"子代理: {node_name}")
         html = SUBAGENT_SECTION_OPEN_TPL.format(label=label)
@@ -473,7 +469,11 @@ class DeepAgent:
             try:
                 connection_closed = await asyncio.wait_for(
                     self._stream_response(
-                        agent, config, query, response, effective_session_id,
+                        agent,
+                        config,
+                        query,
+                        response,
+                        effective_session_id,
                         answer_collector,
                     ),
                     timeout=self.TASK_TIMEOUT,
@@ -521,7 +521,7 @@ class DeepAgent:
                         question=query,
                         to2_answer=answer_collector,
                         to4_answer={},
-                        qa_type=IntentEnum.DATABASE_QA.value[0],
+                        qa_type=IntentEnum.REPORT_QA.value[0],
                         user_token=user_token,
                         file_list=file_list,
                         datasource_id=datasource_id,
@@ -530,14 +530,14 @@ class DeepAgent:
                         f"对话记录已保存 - record_id: {record_id}, "
                         f"会话: {effective_session_id}, 内容长度: {sum(len(s) for s in answer_collector)}"
                     )
-                    # 发送 record_id 到前端
-                    if record_id and not connection_closed:
-                        await self._safe_write(
-                            response,
-                            json.dumps({"record_id": record_id}),
-                            "continue",
-                            DataTypeEnum.RECORD_ID.value[0],
-                        )
+                    # # 发送 record_id 到前端
+                    # if record_id and not connection_closed:
+                    #     await self._safe_write(
+                    #         response,
+                    #         json.dumps({"record_id": record_id}),
+                    #         "continue",
+                    #         DataTypeEnum.RECORD_ID.value[0],
+                    #     )
             except Exception as e:
                 logger.error(f"保存对话记录失败: {e}", exc_info=True)
 
@@ -626,9 +626,7 @@ class DeepAgent:
                 # ---- 2. 检查工具调用管理器终止 ----
                 ctx = self.tool_manager.get_session(session_id)
                 if ctx.should_terminate:
-                    logger.warning(
-                        f"工具调用管理器触发终止: {ctx.termination_reason}"
-                    )
+                    logger.warning(f"工具调用管理器触发终止: {ctx.termination_reason}")
                     # 先关闭所有 <details> 区域
                     await self._close_sections(response, tracker)
                     await self._safe_write(
@@ -644,7 +642,7 @@ class DeepAgent:
                     message_chunk, metadata = chunk
                     node_name = metadata.get("langgraph_node", "")
 
-                    print(f"node_name: {message_chunk}, metadata: {metadata}")
+                    # print(f"node_name: {message_chunk}, metadata: {metadata}")
 
                     # 跳过工具节点（工具结果通过 updates 模式处理）
                     if node_name == "tools":
@@ -750,9 +748,7 @@ class DeepAgent:
                 logger.info(f"客户端连接已断开: {type(e).__name__}")
                 connection_closed = True
             else:
-                logger.error(
-                    f"流式响应异常: {type(e).__name__}: {e}", exc_info=True
-                )
+                logger.error(f"流式响应异常: {type(e).__name__}: {e}", exc_info=True)
                 try:
                     # 先关闭打开的 <details>
                     await self._close_sections(response, tracker)
@@ -844,9 +840,7 @@ class DeepAgent:
                         if tool_msg:
                             if not await self._safe_write(response, "\n\n"):
                                 return False
-                            if not await self._safe_write(
-                                response, tool_msg, "info"
-                            ):
+                            if not await self._safe_write(response, tool_msg, "info"):
                                 return False
                             answer_collector.append(tool_msg)
 
@@ -855,12 +849,8 @@ class DeepAgent:
                 content_str = str(msg.content) if msg.content else ""
                 tool_result_msg = self._format_tool_result(name, content_str)
                 if tool_result_msg:
-                    msg_type = (
-                        "error" if "error" in content_str.lower() else "info"
-                    )
-                    if not await self._safe_write(
-                        response, tool_result_msg, msg_type
-                    ):
+                    msg_type = "error" if "error" in content_str.lower() else "info"
+                    if not await self._safe_write(response, tool_result_msg, msg_type):
                         return False
                     answer_collector.append(tool_result_msg)
 

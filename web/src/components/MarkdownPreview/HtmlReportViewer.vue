@@ -70,6 +70,27 @@ const contentSize = computed(() => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 })
+
+// HTML 源码区域滚动容器
+const sourcePaneRef = ref<HTMLElement | null>(null)
+
+// 后端推送时实时滚动到最下方（仅在「HTML 源码」Tab 且内容变化时）
+const scrollSourceToBottom = () => {
+  nextTick(() => {
+    if (activeTab.value === 'source' && sourcePaneRef.value) {
+      sourcePaneRef.value.scrollTop = sourcePaneRef.value.scrollHeight
+    }
+  })
+}
+
+watch(() => props.htmlContent, () => {
+  scrollSourceToBottom()
+}, { flush: 'post' })
+
+// 切换到 HTML 源码 Tab 时也滚到底部
+watch(activeTab, (tab) => {
+  if (tab === 'source') scrollSourceToBottom()
+})
 </script>
 
 <template>
@@ -135,7 +156,7 @@ const contentSize = computed(() => {
     <!-- Tab 内容区域 -->
     <div class="tab-content">
       <!-- HTML 源码 Tab -->
-      <div v-show="activeTab === 'source'" class="tab-pane source-pane">
+      <div ref="sourcePaneRef" v-show="activeTab === 'source'" class="tab-pane source-pane">
         <pre class="source-code"><code>{{ htmlContent }}</code></pre>
         <div v-if="generating && !ready" class="source-cursor">
           <span class="cursor-blink">▌</span>
