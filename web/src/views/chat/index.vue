@@ -67,6 +67,11 @@ const hasMoreConversationHistory = computed(
 // 新增：专门用于控制转场动画的Key，避免因 currentConversationChatId 变化（如追加消息时）导致组件重载
 const chatTransitionKey = ref('chat-list')
 
+// 技能中心：跳转独立页面
+function handleSkillCenterClick() {
+  router.push({ name: 'SkillCenter' })
+}
+
 // 管理对话
 const isModalOpen = ref(false)
 function openModal() {
@@ -1803,9 +1808,10 @@ const handleHistoryClick = async (item: any) => {
 
             <div
               class="my-space flex items-center gap-2 text-[#6A6A6A] hover:text-[#7E6BF2] cursor-pointer text-[14px] font-normal transition-colors history-item-text"
+              @click="handleSkillCenterClick"
             >
-              <div class="i-hugeicons:folder-01 text-18"></div>
-              <span>我的空间</span>
+              <div class="i-hugeicons:magic-wand-01 text-18"></div>
+              <span>技能中心</span>
             </div>
           </div>
         </div>
@@ -2447,6 +2453,7 @@ const handleHistoryClick = async (item: any) => {
 </template>
 
 <style lang="scss" scoped>
+@use "sass:color";
 // ============================================
 // 设计系统变量 - 与 default-page.vue 保持一致
 // ============================================
@@ -2489,6 +2496,9 @@ $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   font-family: $font-family-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  // Firefox 滚动条样式（置于嵌套规则之前，避免 mixed-decls 警告）
+  scrollbar-width: thin;
+  scrollbar-color: rgba(138, 138, 138, 0.2) transparent;
 
   * {
     font-family: $font-family-base;
@@ -2512,10 +2522,6 @@ $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
       background: rgba(138, 138, 138, 0.4);
     }
   }
-
-  // Firefox 滚动条样式
-  scrollbar-width: thin;
-  scrollbar-color: rgba(138, 138, 138, 0.2) transparent;
 }
 
 .new-chat-btn {
@@ -2552,7 +2558,7 @@ $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
 
   &:hover {
-    background-color: darken($bg-subtle, 2%);
+    background-color: color.adjust($bg-subtle, $lightness: -2%);
   }
 }
 
@@ -2667,7 +2673,7 @@ $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     border-radius: 3px;
 
     &:hover {
-      background: darken($border-color, 15%);
+      background: color.adjust($border-color, $lightness: -15%);
     }
   }
 }
@@ -2699,7 +2705,7 @@ $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
       background: $border-color;
 
       &:hover {
-        background: darken($border-color, 15%);
+        background: color.adjust($border-color, $lightness: -15%);
       }
     }
   }
@@ -2819,7 +2825,7 @@ $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
 
   &:hover {
-    background-color: darken($bg-subtle, 3%);
+    background-color: color.adjust($bg-subtle, $lightness: -3%);
     color: $text-primary;
     border-color: $border-color;
 
@@ -3015,11 +3021,11 @@ $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: lighten($primary-color, 30%);
+  background: color.adjust($primary-color, $lightness: 30%);
   border-radius: 3px;
 
   &:hover {
-    background: lighten($primary-color, 20%);
+    background: color.adjust($primary-color, $lightness: 20%);
   }
 }
 
@@ -3202,7 +3208,7 @@ $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     border-radius: 3px;
 
     &:hover {
-      background-color: darken($border-color, 15%);
+      background-color: color.adjust($border-color, $lightness: -15%);
     }
   }
 }
